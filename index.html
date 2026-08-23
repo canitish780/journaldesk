@@ -1,0 +1,2060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JournalDesk</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#8C6A2F">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --paper: #F6F3EA; --paper-raised: #FBF9F3;
+  --rule: #D8D0B8; --rule-strong: #B9AE8A;
+  --ink: #1E2620; --ink-soft: #55604F;
+  --brass: #8C6A2F; --brass-deep: #6E5423;
+  --credit-green: #2F6F4E; --credit-green-bg: #E4EFE7;
+  --debit-red: #A13D2B; --debit-red-bg: #F5E7E2;
+  --amber: #B9862B; --amber-bg: #F5EAD3;
+  --font-display: 'Lora', serif; --font-ui: 'Inter', sans-serif; --font-mono: 'IBM Plex Mono', monospace;
+  --radius: 3px; --shadow-card: 0 1px 2px rgba(30,38,32,0.06), 0 1px 12px rgba(30,38,32,0.04);
+}
+:root[data-theme="dark"] {
+  --paper: #191D1A; --paper-raised: #22271F;
+  --rule: #383F36; --rule-strong: #4B5346;
+  --ink: #EAE7DC; --ink-soft: #A5AC9D;
+  --brass: #CDA24E; --brass-deep: #E2BC72;
+  --credit-green: #63C08E; --credit-green-bg: #1D3226;
+  --debit-red: #E28F79; --debit-red-bg: #3B241F;
+  --amber: #E1B65C; --amber-bg: #3A2E13;
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.3), 0 1px 12px rgba(0,0,0,0.25);
+}
+* { box-sizing: border-box; }
+html, body { margin:0; padding:0; background:var(--paper); color:var(--ink); font-family:var(--font-ui); -webkit-font-smoothing:antialiased; }
+body { background-image:linear-gradient(var(--rule) 1px, transparent 1px); background-size:100% 32px; min-height:100vh; transition:background-color .2s, color .2s; }
+a { color:var(--brass-deep); }
+button, input, select, textarea { font-family:inherit; font-size:inherit; }
+
+.topbar { position:sticky; top:0; z-index:100; background:var(--paper-raised); border-bottom:1px solid var(--rule-strong); }
+.topbar-row { display:flex; align-items:center; justify-content:space-between; padding:10px 20px; flex-wrap:wrap; row-gap:8px; }
+.topbar-brand { font-family:var(--font-display); font-weight:700; font-size:1.05rem; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.topbar-brand .dot { color:var(--brass); }
+.topbar-brand .topbar-sub { font-family:var(--font-ui); font-weight:400; font-size:0.74rem; color:var(--ink-soft); }
+.topbar-actions { display:flex; align-items:center; gap:10px; }
+.theme-toggle { border:1px solid var(--rule-strong); background:var(--paper); color:var(--ink-soft); width:34px; height:34px; border-radius:50%; cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.theme-toggle:hover { border-color:var(--brass); color:var(--brass-deep); }
+
+.topnav { display:flex; width:100%; border-top:1px solid var(--rule); }
+.nav-item { flex:1; text-align:center; padding:10px 6px; color:var(--ink-soft); text-decoration:none; font-size:0.8rem; font-weight:600; border-bottom:3px solid transparent; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px; transition:background .15s,color .15s,border-color .15s; }
+.nav-item .tab-mark { font-family:var(--font-mono); font-size:0.68rem; color:var(--rule-strong); }
+.nav-item:hover { background:rgba(140,106,47,0.08); color:var(--ink); }
+.nav-item.active { color:var(--brass-deep); border-bottom-color:var(--brass); background:rgba(140,106,47,0.09); }
+.nav-item.active .tab-mark { color:var(--brass); }
+
+.main { padding:22px clamp(14px, 3vw, 40px) 60px; width:100%; }
+.view { display:none; }
+.view.active { display:block; animation:viewIn .18s ease-out; }
+@keyframes viewIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+.page-head { margin-bottom:22px; }
+.page-title { font-family:var(--font-display); font-size:1.55rem; font-weight:600; margin:0 0 4px; }
+.page-sub { color:var(--ink-soft); font-size:0.88rem; margin:0; }
+
+.sync-stamp { display:flex; align-items:center; gap:8px; padding:7px 14px 7px 10px; border:1.5px solid var(--credit-green); border-radius:20px; background:var(--credit-green-bg); font-family:var(--font-mono); font-size:0.74rem; color:var(--credit-green); white-space:nowrap; transition:border-color .2s,background .2s,color .2s; }
+.sync-stamp.syncing { border-color:var(--amber); background:var(--amber-bg); color:var(--amber); }
+.sync-stamp.error { border-color:var(--debit-red); background:var(--debit-red-bg); color:var(--debit-red); }
+.sync-dot { width:9px; height:9px; border-radius:50%; background:currentColor; }
+.sync-stamp.syncing .sync-dot { animation:pulse 1.1s ease-in-out infinite; }
+.sync-stamp.error .sync-dot { animation:pulse 0.8s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.35;} }
+
+.bell-wrap { position:relative; }
+.bell-btn { position:relative; width:34px; height:34px; border-radius:50%; border:1.5px solid var(--rule-strong); background:var(--paper-raised); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1rem; color:var(--ink-soft); }
+.bell-btn:hover { border-color:var(--brass); color:var(--brass-deep); }
+.bell-btn.has-due { border-color:var(--amber); color:var(--amber); }
+.bell-badge { position:absolute; top:-5px; right:-5px; min-width:17px; height:17px; padding:0 4px; border-radius:9px; background:var(--debit-red); color:#fff; font-family:var(--font-mono); font-size:0.65rem; display:flex; align-items:center; justify-content:center; }
+.bell-panel { position:absolute; top:42px; right:0; width:340px; max-height:420px; overflow-y:auto; background:var(--paper-raised); border:1px solid var(--rule-strong); border-radius:var(--radius); box-shadow:0 8px 30px rgba(30,38,32,0.18); z-index:200; display:none; }
+.bell-panel.open { display:block; }
+.bell-panel-title { font-family:var(--font-display); font-weight:600; padding:14px 16px; border-bottom:1px solid var(--rule); font-size:0.95rem; }
+.bell-item { padding:12px 16px; border-bottom:1px solid var(--rule); }
+.bell-item:last-child { border-bottom:none; }
+.bell-item .acc-name { font-weight:600; font-size:0.88rem; }
+.bell-item .due-line { font-family:var(--font-mono); font-size:0.76rem; margin:3px 0 8px; }
+.bell-item .due-line.overdue { color:var(--debit-red); }
+.bell-item .due-line.upcoming { color:var(--amber); }
+.bell-item button.btn { padding:6px 12px; font-size:0.78rem; }
+
+.panel { background:var(--paper-raised); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-card); padding:22px 24px; margin-bottom:20px; }
+.panel-title { font-family:var(--font-display); font-weight:600; font-size:1.05rem; margin:0 0 14px; padding-bottom:10px; border-bottom:1px solid var(--rule); display:flex; align-items:center; justify-content:space-between; gap:10px; }
+label { display:block; font-size:0.78rem; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.03em; margin-bottom:5px; }
+input[type=text], input[type=date], input[type=number], select, textarea { width:100%; padding:9px 11px; border:1px solid var(--rule-strong); border-radius:var(--radius); background:var(--paper-raised); color:var(--ink); margin-bottom:14px; }
+input[type=number] { font-family:var(--font-mono); text-align:right; }
+input:focus, select:focus, textarea:focus { outline:none; border-color:var(--brass); box-shadow:0 0 0 3px rgba(140,106,47,0.15); }
+.checkbox-row { display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:14px; font-size:0.85rem; color:var(--ink); font-weight:500; }
+.checkbox-row input { width:auto; margin:0; }
+.field-row { display:flex; gap:14px; }
+.field-row > div { flex:1; }
+.subgroup { border-left:2px solid var(--brass); padding-left:14px; margin-bottom:6px; }
+button.btn { font-family:var(--font-ui); font-weight:600; font-size:0.88rem; padding:10px 20px; border-radius:var(--radius); border:1px solid var(--brass); background:var(--brass); color:#fff; cursor:pointer; transition:background .15s, transform .05s; }
+button.btn:hover { background:var(--brass-deep); border-color:var(--brass-deep); }
+button.btn:active { transform:translateY(1px); }
+button.btn.ghost { background:transparent; border-color:var(--rule-strong); color:var(--ink-soft); }
+button.btn.small { padding:7px 12px; font-size:0.78rem; }
+button.btn:disabled { opacity:.5; cursor:not-allowed; }
+.error-msg { background:var(--debit-red-bg); color:var(--debit-red); border:1px solid var(--debit-red); padding:9px 12px; border-radius:var(--radius); font-size:0.85rem; margin-bottom:14px; }
+.ok-msg { background:var(--credit-green-bg); color:var(--credit-green); border:1px solid var(--credit-green); padding:9px 12px; border-radius:var(--radius); font-size:0.85rem; margin-bottom:14px; }
+table.ledger { width:100%; border-collapse:collapse; font-size:0.88rem; }
+table.ledger th { text-align:left; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--ink-soft); border-bottom:1.5px solid var(--rule-strong); padding:8px 10px; }
+table.ledger td { padding:9px 10px; border-bottom:1px solid var(--rule); vertical-align:top; }
+table.ledger tbody tr:hover { background:rgba(140,106,47,0.06); }
+.num { font-family:var(--font-mono); text-align:right; white-space:nowrap; }
+.num.debit { color:var(--debit-red); }
+.num.credit { color:var(--credit-green); }
+.num.balance { font-weight:600; }
+.pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:0.7rem; font-weight:600; letter-spacing:0.02em; }
+.pill.Assets { background:var(--credit-green-bg); color:var(--credit-green); }
+.pill.Liabilities { background:var(--debit-red-bg); color:var(--debit-red); }
+.pill.Income { background:#E3EAF5; color:#33538A; }
+:root[data-theme="dark"] .pill.Income { background:#1E2C3F; color:#8FB0E0; }
+.pill.Expense { background:var(--amber-bg); color:var(--amber); }
+.pill.interest { background:var(--amber-bg); color:var(--brass-deep); }
+.pill.category { background:var(--paper); color:var(--brass-deep); border:1px solid var(--rule-strong); }
+.pill.pending { background:var(--amber-bg); color:var(--amber); }
+.empty-state { text-align:center; padding:50px 20px; color:var(--ink-soft); font-size:0.92rem; }
+.empty-state .eyebrow { font-family:var(--font-mono); font-size:0.75rem; color:var(--rule-strong); margin-bottom:8px; }
+.scroll-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.lock-overlay { position:fixed; inset:0; background:var(--ink); display:flex; align-items:center; justify-content:center; z-index:1000; }
+.lock-card { background:var(--paper-raised); border-radius:var(--radius); padding:36px 34px; width:320px; max-width:90vw; box-shadow:0 10px 40px rgba(0,0,0,.4); text-align:center; }
+.lock-card .seal { width:46px; height:46px; border:2px solid var(--brass); border-radius:50%; margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:700; color:var(--brass); }
+.lock-card h2 { font-family:var(--font-display); font-size:1.2rem; margin:0 0 6px; }
+.lock-card p { color:var(--ink-soft); font-size:0.85rem; margin:0 0 18px; }
+
+.acct-picker-wrap { position:relative; }
+input.acct-picker-input { width:100%; padding:9px 11px; border:1px solid var(--rule-strong); border-radius:var(--radius); background:var(--paper-raised); color:var(--ink); margin-bottom:0; }
+.acct-picker-list { position:absolute; top:calc(100% + 4px); left:0; right:0; max-height:260px; overflow-y:auto; background:var(--paper-raised); border:1px solid var(--rule-strong); border-radius:var(--radius); box-shadow:0 8px 24px rgba(30,38,32,.2); z-index:150; display:none; }
+.acct-picker-list.open { display:block; }
+.acct-picker-group { font-family:var(--font-mono); font-size:0.66rem; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); padding:8px 12px 4px; }
+.acct-picker-item { padding:8px 12px; cursor:pointer; font-size:0.86rem; }
+.acct-picker-item:hover, .acct-picker-item.hl { background:rgba(140,106,47,0.12); }
+.acct-picker-empty { padding:14px 12px; color:var(--ink-soft); font-size:0.85rem; }
+
+.je-section-label { font-family:var(--font-display); font-weight:600; font-size:0.92rem; color:var(--brass-deep); border-bottom:1px solid var(--rule); padding-bottom:6px; margin-bottom:10px; }
+.je-lines { margin-bottom:10px; }
+.je-line { display:grid; gap:10px; align-items:start; margin-bottom:10px; }
+.je-line.debit-line { grid-template-columns:1fr 28px 130px 24px; }
+.je-line.credit-line { grid-template-columns:28px 1fr 130px 24px; padding-left:22px; }
+.je-line .dr-label, .je-line .to-label { font-family:var(--font-mono); font-weight:600; font-size:0.85rem; color:var(--ink-soft); padding-top:10px; text-align:center; }
+.je-remove { width:20px; height:20px; margin-top:9px; border-radius:50%; border:none; background:transparent; color:var(--ink-soft); cursor:pointer; font-size:0.8rem; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; }
+.je-remove:hover { background:var(--debit-red-bg); color:var(--debit-red); }
+.je-totals { display:flex; justify-content:flex-end; gap:24px; padding:10px 0; border-top:1.5px solid var(--rule-strong); margin-top:6px; font-family:var(--font-mono); font-size:0.9rem; }
+.je-totals .balanced { color:var(--credit-green); font-weight:600; }
+.je-totals .unbalanced { color:var(--debit-red); font-weight:600; }
+
+.tile-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:14px; margin-bottom:24px; }
+.tile { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:22px 12px; background:var(--paper-raised); border:1px solid var(--rule); border-radius:var(--radius); cursor:pointer; font-family:var(--font-ui); font-weight:600; font-size:0.83rem; color:var(--ink); box-shadow:var(--shadow-card); transition:transform .12s ease-out, box-shadow .12s ease-out, border-color .12s ease-out; text-align:center; }
+.tile:hover { border-color:var(--brass); transform:translateY(-2px); box-shadow:0 6px 18px rgba(30,38,32,0.14); }
+.tile:active { transform:translateY(0) scale(0.98); }
+.tile-icon { font-family:var(--font-display); font-size:1.7rem; color:var(--brass); line-height:1; }
+.browse-row { padding:9px 10px; border-radius:var(--radius); cursor:pointer; font-size:0.88rem; transition:background .1s; }
+.browse-row:hover { background:rgba(140,106,47,0.09); }
+.reminder-form { display:flex; gap:8px; padding:12px 16px; border-bottom:1px solid var(--rule); }
+.reminder-form input[type=text] { margin-bottom:0; }
+.reminder-form input[type=date] { margin-bottom:0; width:140px; flex-shrink:0; }
+.custom-reminder-item .due-line { font-family:var(--font-mono); font-size:0.76rem; margin:3px 0 8px; color:var(--ink-soft); }
+.stat-row { display:flex; gap:16px; margin-bottom:20px; flex-wrap:wrap; }
+.stat-card { flex:1; min-width:160px; background:var(--paper-raised); border:1px solid var(--rule); border-radius:var(--radius); padding:16px 18px; }
+.stat-card .label { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.03em; color:var(--ink-soft); margin-bottom:6px; }
+.stat-card .value { font-family:var(--font-mono); font-size:1.35rem; font-weight:600; }
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:900; }
+.modal-card { background:var(--paper-raised); border-radius:var(--radius); padding:26px 26px 22px; width:380px; max-width:90vw; box-shadow:0 10px 40px rgba(0,0,0,.3); max-height:88vh; overflow-y:auto; }
+.modal-card h3 { font-family:var(--font-display); margin:0 0 14px; font-size:1.1rem; }
+.category-chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px; }
+.subhead-label { font-size:0.78rem; color:var(--ink-soft); font-weight:600; margin:10px 0 4px; }
+
+.detail-row, .doc-row { display:grid; grid-template-columns:1fr 1fr 24px; gap:10px; align-items:start; margin-bottom:10px; }
+.doc-row input[type=file] { padding:7px 8px; font-size:0.82rem; }
+.doc-row .doc-file-status { font-size:0.74rem; color:var(--ink-soft); margin-top:-8px; margin-bottom:10px; }
+
+.acct-info-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:12px 20px; margin-bottom:6px; }
+.acct-info-item .k { font-size:0.7rem; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-soft); margin-bottom:2px; }
+.acct-info-item .v { font-size:0.92rem; }
+.doc-chip-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+.doc-chip { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border:1px solid var(--rule-strong); border-radius:20px; font-size:0.8rem; background:var(--paper); text-decoration:none; color:var(--ink); }
+.doc-chip:hover { border-color:var(--brass); color:var(--brass-deep); }
+.doc-chip.pending { color:var(--amber); border-color:var(--amber); cursor:default; }
+.doc-chip .chip-del { border:none; background:transparent; color:var(--ink-soft); cursor:pointer; font-size:0.85rem; line-height:1; padding:0; margin-left:2px; }
+.doc-chip .chip-del:hover { color:var(--debit-red); }
+.edit-detail-row { display:grid; grid-template-columns:1fr 1fr 24px; gap:10px; align-items:center; margin-bottom:8px; }
+.edit-detail-row .dk { font-size:0.85rem; font-weight:600; }
+.edit-detail-row input { margin-bottom:0; }
+.supporting-chip-list { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+
+@media (min-width:1000px) {
+  #view-accounts.active { display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start; }
+  #view-accounts.active > .panel:nth-of-type(1),
+  #view-accounts.active > .panel:nth-of-type(2) { margin-bottom:0; }
+  #view-accounts.active > .panel:nth-of-type(3),
+  #view-accounts.active > .panel:nth-of-type(4) { grid-column:1 / -1; }
+}
+
+@media (max-width:900px) { table.ledger { min-width:560px; } }
+@media (max-width:800px) {
+  .field-row { flex-direction:column; }
+  .page-title { font-size:1.35rem; }
+  .je-line.debit-line, .je-line.credit-line { grid-template-columns:1fr; padding-left:0; gap:6px; }
+  .je-line .dr-label, .je-line .to-label { text-align:left; padding-top:0; font-size:0.7rem; text-transform:uppercase; letter-spacing:.05em; order:-1; }
+  .je-remove { width:100%; height:26px; border-radius:var(--radius); border:1px solid var(--rule-strong); }
+  .detail-row, .doc-row, .edit-detail-row { grid-template-columns:1fr; }
+  .bell-panel { position:fixed; top:auto; left:12px; right:12px; width:auto; max-height:70vh; }
+  .stat-row { gap:10px; }
+  .stat-card { min-width:calc(50% - 5px); padding:12px 14px; }
+}
+@media (max-width:480px) {
+  .topbar-row { padding:9px 14px; }
+  .nav-item { font-size:0.72rem; padding:9px 3px; }
+  .panel { padding:16px 14px; }
+  .stat-card { min-width:100%; }
+}
+@media (prefers-reduced-motion:reduce) { .sync-stamp.syncing .sync-dot, .sync-stamp.error .sync-dot { animation:none; } }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-row">
+      <div class="topbar-brand">JournalDesk<span class="dot">.</span><span class="topbar-sub">by Nitish Agrawal</span></div>
+      <div class="topbar-actions">
+        <div class="bell-wrap">
+          <button class="bell-btn" id="bellBtn" title="Interest reminders">🔔<span class="bell-badge" id="bellBadge" style="display:none;">0</span></button>
+          <div class="bell-panel" id="bellPanel">
+            <div class="bell-panel-title">Reminders</div>
+            <div id="bellList"></div>
+            <div id="reminderFormWrap" style="display:none;" class="reminder-form">
+              <input type="text" id="newReminderLabel" placeholder="e.g. Pay rent, renew insurance">
+              <input type="date" id="newReminderDate">
+              <button class="btn small" id="saveReminderBtn" type="button">+</button>
+            </div>
+            <div style="padding:10px 16px;border-top:1px solid var(--rule);">
+              <button class="btn ghost small" id="toggleReminderFormBtn" type="button" style="width:100%;">+ Set custom reminder</button>
+            </div>
+          </div>
+        </div>
+        <div class="sync-stamp" id="syncStamp"><span class="sync-dot"></span>Checking…</div>
+        <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
+      </div>
+    </div>
+    <nav class="topnav" id="sidebarNav">
+      <a class="nav-item" data-view="dashboard"><span class="tab-mark">§</span>Dashboard</a>
+      <a class="nav-item" data-view="journal"><span class="tab-mark">+</span>New entry</a>
+      <a class="nav-item" data-view="ledger"><span class="tab-mark">¶</span>Ledgers</a>
+      <a class="nav-item" data-view="accounts"><span class="tab-mark">#</span>Accounts</a>
+    </nav>
+  </header>
+
+  <main class="main">
+    <div class="page-head">
+      <h1 class="page-title" id="pageTitle">Dashboard</h1>
+      <p class="page-sub" id="pageSub">An overview of where things stand.</p>
+    </div>
+
+    <!-- DASHBOARD -->
+    <section class="view active" id="view-dashboard">
+      <div class="tile-grid" id="tileGrid">
+        <button class="tile" type="button" data-tile="journal"><span class="tile-icon">+</span>New Entry</button>
+        <button class="tile" type="button" data-tile="newCategory"><span class="tile-icon">▤</span>New Category</button>
+        <button class="tile" type="button" data-tile="newAccount"><span class="tile-icon">#</span>New Account</button>
+        <button class="tile" type="button" data-tile="entries"><span class="tile-icon">¶</span>Entries in FY</button>
+        <button class="tile" type="button" data-tile="ledger"><span class="tile-icon">§</span>All Ledgers</button>
+        <button class="tile" type="button" data-tile="plStatement"><span class="tile-icon">↗</span>Profit &amp; Loss</button>
+        <button class="tile" type="button" data-tile="balanceSheet"><span class="tile-icon">⚖</span>Balance Sheet</button>
+      </div>
+      <div class="stat-row" id="statRow"></div>
+      <div class="panel">
+        <div class="panel-title">Recent entries</div>
+        <div id="recentWrap" class="scroll-wrap"><div class="empty-state">Loading…</div></div>
+      </div>
+    </section>
+
+    <!-- JOURNAL -->
+    <section class="view" id="view-journal">
+      <div class="panel">
+        <div id="jeMsg"></div>
+        <div class="field-row">
+          <div><label>Date</label><input type="date" id="jeDate"></div>
+        </div>
+        <label>Narration</label>
+        <textarea id="jeNarration" rows="2" placeholder="What is this entry for?"></textarea>
+
+        <div class="je-section-label">Debit</div>
+        <div class="je-lines" id="debitLines"></div>
+        <button class="btn ghost" id="addDebitLine" type="button">+ Add debit line</button>
+
+        <div class="je-section-label" style="margin-top:18px;">Credit</div>
+        <div class="je-lines" id="creditLines"></div>
+        <button class="btn ghost" id="addCreditLine" type="button">+ Add credit line</button>
+
+        <div class="je-section-label" style="margin-top:18px;">Supporting documents (optional)</div>
+        <div class="supporting-chip-list" id="supportingDocsList"></div>
+        <button class="btn ghost small" id="addSupportingBtn" type="button">📷 Add supporting document</button>
+        <input type="file" id="supportingFileInput" accept="image/*,application/pdf" capture="environment" style="display:none;">
+        <p style="font-size:0.76rem;color:var(--ink-soft);margin:8px 0 0;">Saved to a shared "Supportings" folder in Drive, named after the voucher number. Max 8MB per file.</p>
+
+        <div class="je-totals">
+          <span>Debit: <b id="totDebit">0.00</b></span>
+          <span>Credit: <b id="totCredit">0.00</b></span>
+          <span id="balanceFlag" class="unbalanced">Unbalanced</span>
+        </div>
+        <div style="margin-top:18px;"><button class="btn" id="postEntry" type="button">Post entry</button></div>
+      </div>
+    </section>
+
+    <!-- LEDGER -->
+    <section class="view" id="view-ledger">
+      <div class="panel">
+        <div class="field-row">
+          <div><label>Account</label><div class="acct-picker-wrap" id="fAccountContainer"></div></div>
+          <div><label>From</label><input type="date" id="fFrom"></div>
+          <div><label>To</label><input type="date" id="fTo"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Browse all accounts</div>
+        <input type="text" id="ledgerBrowseSearch" placeholder="Type to filter…">
+        <div id="ledgerBrowseList" class="scroll-wrap"></div>
+      </div>
+      <div class="panel" id="acctDetailsPanel" style="display:none;">
+        <div class="panel-title">
+          <span id="acctDetailsTitle">Account details</span>
+          <button class="btn ghost small" id="acctDetailsEditBtn" type="button">✎ Edit</button>
+        </div>
+        <div id="acctDetailsMsg"></div>
+        <div id="acctDetailsBody"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title" id="ledgerTitle">Ledger</div>
+        <div id="ledgerWrap" class="scroll-wrap"><div class="empty-state">Choose an account above.</div></div>
+      </div>
+    </section>
+
+    <!-- ACCOUNTS -->
+    <section class="view" id="view-accounts">
+      <div class="panel">
+        <div class="panel-title">Categories</div>
+        <div id="catMsg"></div>
+        <div class="category-chips" id="categoryChips"></div>
+        <div class="field-row">
+          <div><label>New category name</label><input type="text" id="newCatName" placeholder="e.g. Fixed Deposits, Utilities"></div>
+          <div><label>Under head</label>
+            <select id="newCatHead">
+              <option value="Assets">Assets</option>
+              <option value="Liabilities">Liabilities</option>
+              <option value="Income">Income</option>
+              <option value="Expense">Expense</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn small" id="addCatBtn" type="button">Add category</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Add a new account</div>
+        <div id="accMsg"></div>
+        <div class="field-row">
+          <div><label>Account name</label><input type="text" id="accName" placeholder="e.g. HDFC Savings, FD #4021, Loan to Rajesh"></div>
+          <div><label>Head</label>
+            <select id="accHead">
+              <option value="Assets">Assets</option>
+              <option value="Liabilities">Liabilities</option>
+              <option value="Income">Income</option>
+              <option value="Expense">Expense</option>
+            </select>
+          </div>
+        </div>
+
+        <label>Category (optional)</label>
+        <select id="accCategory"><option value="">No category</option></select>
+
+        <div id="assetOnlyFields" style="display:none;">
+          <div class="field-row">
+            <div><label>Account no. (optional)</label><input type="text" id="accNumber" placeholder="e.g. XXXX1234"></div>
+          </div>
+
+          <label class="checkbox-row"><input type="checkbox" id="accEarnsInterest"> This account earns interest</label>
+
+          <div class="subgroup" id="interestFields" style="display:none;">
+            <div class="field-row">
+              <div><label>Interest rate (% p.a.)</label><input type="number" step="0.01" id="accRate" placeholder="e.g. 7.5"></div>
+              <div><label>Accrual frequency</label>
+                <select id="accFreq">
+                  <option value="Monthly">Monthly</option>
+                  <option value="Yearly">Yearly</option>
+                  <option value="Maturity">On maturity</option>
+                </select>
+              </div>
+            </div>
+            <div class="field-row">
+              <div><label id="accrualDateLabel">Interest accrues on</label><input type="date" id="accAccrualDate"></div>
+              <div><label>Credit interest to</label><select id="accIncomeAcc"></select></div>
+            </div>
+            <p style="font-size:0.78rem;color:var(--ink-soft);margin:-8px 0 14px;">
+              For Monthly, only the <i>day</i> you pick matters (recurs every month). For Yearly, the month + day recur every year. For Maturity, the full date is used once.
+            </p>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div><label>Opening balance</label><input type="number" step="0.01" id="accOpening" placeholder="0.00"></div>
+          <div><label>Balance type</label>
+            <select id="accOpeningType"><option value="Dr">Debit</option><option value="Cr">Credit</option></select>
+          </div>
+        </div>
+
+        <label style="margin-top:4px;">Additional details (optional)</label>
+        <div id="detailRows"></div>
+        <button class="btn ghost small" id="addDetailBtn" type="button">+ Add detail</button>
+
+        <label style="margin-top:16px;">Documents (optional)</label>
+        <div id="documentRows"></div>
+        <button class="btn ghost small" id="addDocBtn" type="button">+ Add document</button>
+        <p style="font-size:0.76rem;color:var(--ink-soft);margin:10px 0 0;">Documents upload to Google Drive in a folder named after this account. Max 8MB per file. If you're offline, they're saved on this device and upload automatically once you're back online.</p>
+
+        <div style="margin-top:18px;"><button class="btn" id="addAccBtn" type="button">Add account</button></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">All accounts</div>
+        <div id="accountsWrap" class="scroll-wrap"><div class="empty-state">Loading…</div></div>
+      </div>
+    </section>
+
+    <!-- ENTRIES (day book) -->
+    <section class="view" id="view-entries">
+      <div class="panel">
+        <div class="field-row">
+          <div><label>Search</label><input type="text" id="entriesSearch" placeholder="Narration or account…"></div>
+          <div><label>From</label><input type="date" id="entriesFrom"></div>
+          <div><label>To</label><input type="date" id="entriesTo"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Journal register</div>
+        <div id="entriesWrap" class="scroll-wrap"><div class="empty-state">Loading…</div></div>
+      </div>
+    </section>
+
+    <!-- PROFIT & LOSS -->
+    <section class="view" id="view-plStatement">
+      <div class="panel">
+        <div class="field-row">
+          <div><label>From</label><input type="date" id="plFrom"></div>
+          <div><label>To</label><input type="date" id="plTo"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Profit &amp; Loss</div>
+        <div id="plWrap" class="scroll-wrap"><div class="empty-state">Loading…</div></div>
+      </div>
+    </section>
+
+    <!-- BALANCE SHEET -->
+    <section class="view" id="view-balanceSheet">
+      <div class="panel">
+        <div class="field-row">
+          <div><label>As of</label><input type="date" id="bsAsOf"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Balance Sheet</div>
+        <div id="bsWrap" class="scroll-wrap"><div class="empty-state">Loading…</div></div>
+      </div>
+    </section>
+  </main>
+
+<script>
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbziPgL-_xIqVbAXdIFGWMA4ZHULb75mVv26dMJ0UsqcZPccGlBNMzs3nx5woLDTcolWMw/exec';
+const MAX_FILE_BYTES = 8 * 1024 * 1024;
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('ledger_theme', theme);
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+}
+applyTheme(localStorage.getItem('ledger_theme') || 'light');
+
+const IDB_NAME = 'journaldesk-db';
+const IDB_ACCOUNTS = 'pendingAccountBundles';
+const IDB_ENTRIES = 'pendingEntryBundles';
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 2);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(IDB_ACCOUNTS)) db.createObjectStore(IDB_ACCOUNTS, { keyPath: 'clientAccountUID' });
+      if (!db.objectStoreNames.contains(IDB_ENTRIES)) db.createObjectStore(IDB_ENTRIES, { keyPath: 'clientEntryUID' });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbPut(store, obj) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).put(obj);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function idbGetAll(store) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbDelete(store, key) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+const LEDGER = (() => {
+  const LS = {
+    token: 'ledger_deviceToken',
+    pendingCategories: 'ledger_pendingCategories',
+    accountsCache: 'ledger_accountsCache',
+    categoriesCache: 'ledger_categoriesCache',
+    entriesCache: 'ledger_entriesCache',
+    detailsCache: 'ledger_detailsCache',
+    documentsCache: 'ledger_documentsCache',
+    remindersCache: 'ledger_remindersCache',
+    lastSync: 'ledger_lastSyncTime'
+  };
+
+  // Requests are cached per exact action+params combo for a short window,
+  // so switching between views repeatedly doesn't re-hit Apps Script every
+  // time — this is the main lever for staying well under the daily quota.
+  const REQUEST_TTL_MS = 60000;
+  function reqCacheKey(action, params) { return 'reqcache:' + action + ':' + JSON.stringify(params || {}); }
+  function getCachedRequest(key) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      const { data, ts } = JSON.parse(raw);
+      if (Date.now() - ts > REQUEST_TTL_MS) return null;
+      return data;
+    } catch (e) { return null; }
+  }
+  function setCachedRequest(key, data) { try { localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch (e) { /* storage full — safe to skip caching */ } }
+  function invalidateRequestCache(actionPrefix) {
+    Object.keys(localStorage).forEach(k => { if (k.indexOf('reqcache:' + actionPrefix) === 0) localStorage.removeItem(k); });
+  }
+
+  function getJSON(key, fallback) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } }
+  function setJSON(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+  function uuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+  function money(n) {
+    const v = Number(n) || 0;
+    return v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  async function apiGet(action, params) {
+    const url = new URL(APPS_SCRIPT_URL);
+    url.searchParams.set('action', action);
+    Object.entries(params || {}).forEach(([k, v]) => { if (v !== undefined && v !== null) url.searchParams.set(k, v); });
+    const res = await fetch(url.toString(), { method: 'GET' });
+    if (!res.ok) throw new Error('Network error (' + res.status + ')');
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  }
+  async function apiPost(action, body) {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ action }, body))
+    });
+    if (!res.ok) throw new Error('Network error (' + res.status + ')');
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  }
+
+  function deviceToken() { return localStorage.getItem(LS.token); }
+  async function postDirect(action, body) { return apiPost(action, Object.assign({ deviceToken: deviceToken() }, body)); }
+
+  const auth = {
+    isUnlocked() { return !!deviceToken(); },
+    ensureUnlocked() {
+      return new Promise((resolve) => {
+        if (this.isUnlocked()) { resolve(); return; }
+        const overlay = document.createElement('div');
+        overlay.className = 'lock-overlay';
+        overlay.innerHTML = `
+          <div class="lock-card">
+            <div class="seal">L</div>
+            <h2>Unlock this device</h2>
+            <p>Enter your passphrase once — this device will stay unlocked after.</p>
+            <div id="lockError"></div>
+            <input type="text" id="lockInput" placeholder="Passphrase" autocomplete="off" />
+            <button class="btn" id="lockSubmit" style="width:100%">Unlock</button>
+          </div>`;
+        document.body.appendChild(overlay);
+        const input = overlay.querySelector('#lockInput');
+        const errBox = overlay.querySelector('#lockError');
+        const submit = overlay.querySelector('#lockSubmit');
+        input.focus();
+        async function tryUnlock() {
+          const val = input.value.trim();
+          if (!val) return;
+          submit.disabled = true; submit.textContent = 'Checking…'; errBox.innerHTML = '';
+          try {
+            const data = await apiPost('verifyPassphrase', { passphrase: val });
+            localStorage.setItem(LS.token, data.deviceToken);
+            overlay.remove();
+            resolve();
+          } catch (e) {
+            errBox.innerHTML = `<div class="error-msg">${e.message}</div>`;
+            submit.disabled = false; submit.textContent = 'Unlock';
+          }
+        }
+        submit.addEventListener('click', tryUnlock);
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryUnlock(); });
+      });
+    }
+  };
+
+  let syncing = false;
+  let bundlePendingCount = 0;
+  let consecutiveFailCycles = 0;
+  let listeners = [];
+  function onStatusChange(fn) { listeners.push(fn); fn(status()); }
+  function notify() { const s = status(); listeners.forEach(fn => fn(s)); }
+  function status() {
+    const pendingC = getJSON(LS.pendingCategories, []);
+    return {
+      pendingCount: pendingC.length + bundlePendingCount,
+      syncing, lastSync: localStorage.getItem(LS.lastSync),
+      error: consecutiveFailCycles >= 2
+    };
+  }
+  function isAccountBundleComplete(b) {
+    return b.accountSynced && (b.details || []).every(d => d.synced) && (b.documents || []).every(d => d.synced);
+  }
+  function isEntryBundleComplete(b) {
+    return b.entrySynced && (b.supportingDocs || []).every(d => d.synced);
+  }
+  async function refreshPendingCounts() {
+    const [accBundles, entryBundles] = await Promise.all([idbGetAll(IDB_ACCOUNTS), idbGetAll(IDB_ENTRIES)]);
+    bundlePendingCount = accBundles.filter(b => !isAccountBundleComplete(b)).length + entryBundles.filter(b => !isEntryBundleComplete(b)).length;
+  }
+
+  async function syncAccountBundles() {
+    const bundles = await idbGetAll(IDB_ACCOUNTS);
+    for (const bundle of bundles) {
+      try {
+        if (!bundle.accountSynced) {
+          const data = await apiPost('addAccount', {
+            deviceToken: deviceToken(), clientAccountUID: bundle.clientAccountUID,
+            accountName: bundle.accountName, head: bundle.head, categoryId: bundle.categoryId,
+            openingBalance: bundle.openingBalance, openingType: bundle.openingType,
+            accountNumber: bundle.accountNumber, interestRate: bundle.interestRate,
+            accrualFrequency: bundle.accrualFrequency, accrualDate: bundle.accrualDate,
+            incomeAccountId: bundle.incomeAccountId
+          });
+          bundle.resolvedAccountId = data.accountId;
+          bundle.accountSynced = true;
+          await idbPut(IDB_ACCOUNTS, bundle);
+        }
+        if (bundle.accountSynced) {
+          for (const d of bundle.details) {
+            if (d.synced) continue;
+            await apiPost('addAccountDetail', { deviceToken: deviceToken(), accountId: bundle.resolvedAccountId, detailName: d.detailName, detailValue: d.detailValue, clientDetailUID: d.clientDetailUID });
+            d.synced = true;
+            await idbPut(IDB_ACCOUNTS, bundle);
+          }
+          for (const doc of bundle.documents) {
+            if (doc.synced) continue;
+            const res = await apiPost('addAccountDocument', { deviceToken: deviceToken(), accountId: bundle.resolvedAccountId, accountName: bundle.accountName, documentName: doc.documentName, fileName: doc.fileName, mimeType: doc.mimeType, base64Data: doc.base64Data, clientDocUID: doc.clientDocUID });
+            doc.synced = true;
+            doc.driveFileUrl = res.driveFileUrl || null;
+            doc.base64Data = null;
+            await idbPut(IDB_ACCOUNTS, bundle);
+          }
+        }
+      } catch (e) { /* leave as-is, retry next cycle */ }
+      if (isAccountBundleComplete(bundle)) { await idbDelete(IDB_ACCOUNTS, bundle.clientAccountUID); invalidateRequestCache('getAccounts'); }
+    }
+  }
+
+  async function syncEntryBundles() {
+    const bundles = await idbGetAll(IDB_ENTRIES);
+    for (const bundle of bundles) {
+      try {
+        if (!bundle.entrySynced) {
+          await apiPost('addJournalEntry', {
+            deviceToken: deviceToken(), clientEntryUID: bundle.clientEntryUID, date: bundle.date,
+            voucherNo: bundle.voucherNo, narration: bundle.narration, lines: bundle.lines,
+            accrualAccountId: bundle.accrualAccountId, accrualDate: bundle.accrualDate
+          });
+          bundle.entrySynced = true;
+          await idbPut(IDB_ENTRIES, bundle);
+        }
+        if (bundle.entrySynced) {
+          for (const doc of bundle.supportingDocs) {
+            if (doc.synced) continue;
+            const res = await apiPost('addSupportingDocument', { deviceToken: deviceToken(), voucherNo: bundle.voucherNo, fileName: doc.fileName, mimeType: doc.mimeType, base64Data: doc.base64Data, clientDocUID: doc.clientDocUID });
+            doc.synced = true;
+            doc.driveFileUrl = res.driveFileUrl || null;
+            doc.base64Data = null;
+            await idbPut(IDB_ENTRIES, bundle);
+          }
+        }
+      } catch (e) { /* leave as-is, retry next cycle */ }
+      if (isEntryBundleComplete(bundle)) { await idbDelete(IDB_ENTRIES, bundle.clientEntryUID); invalidateRequestCache('getEntries'); }
+    }
+  }
+
+  async function syncPending() {
+    if (syncing || !auth.isUnlocked()) return;
+    syncing = true; notify();
+
+    const pendingC = getJSON(LS.pendingCategories, []);
+    for (const cat of [...pendingC]) {
+      try { await apiPost('addCategory', { deviceToken: deviceToken(), ...cat }); removeFromQueue(LS.pendingCategories, 'clientCategoryUID', cat.clientCategoryUID); invalidateRequestCache('getCategories'); }
+      catch (e) { /* retry next cycle */ }
+    }
+
+    await syncAccountBundles();
+    await syncEntryBundles();
+    await refreshPendingCounts();
+
+    localStorage.setItem(LS.lastSync, new Date().toISOString());
+    syncing = false;
+
+    const s = status();
+    if (s.pendingCount > 0 && navigator.onLine) consecutiveFailCycles++;
+    else consecutiveFailCycles = 0;
+    notify();
+  }
+  function removeFromQueue(key, idKey, uid) {
+    const list = getJSON(key, []);
+    setJSON(key, list.filter(x => x[idKey] !== uid));
+  }
+  function queueCategory(cat) { const list = getJSON(LS.pendingCategories, []); list.push(cat); setJSON(LS.pendingCategories, list); notify(); syncPending(); }
+  async function queueAccountBundle(bundle) {
+    await idbPut(IDB_ACCOUNTS, bundle);
+    await refreshPendingCounts();
+    notify();
+    syncPending();
+  }
+  async function queueEntryBundle(bundle) {
+    await idbPut(IDB_ENTRIES, bundle);
+    await refreshPendingCounts();
+    notify();
+    syncPending();
+  }
+  function startSyncLoop() {
+    refreshPendingCounts().then(() => syncPending());
+    setInterval(syncPending, 45000);
+    window.addEventListener('online', syncPending);
+    window.addEventListener('focus', syncPending);
+  }
+
+  function getAccountsCacheSync() { return getJSON(LS.accountsCache, []); }
+  function getCategoriesCacheSync() { return getJSON(LS.categoriesCache, []); }
+  function getEntriesCacheSync() { return getJSON(LS.entriesCache, []); }
+
+  async function getAccounts() {
+    let serverAccounts = [];
+    const cacheKey = reqCacheKey('getAccounts');
+    const cached = getCachedRequest(cacheKey);
+    if (cached) {
+      serverAccounts = cached;
+    } else {
+      try {
+        const data = await apiGet('getAccounts', { deviceToken: deviceToken() });
+        serverAccounts = data.accounts;
+        setJSON(LS.accountsCache, serverAccounts);
+        setCachedRequest(cacheKey, serverAccounts);
+      } catch (e) { serverAccounts = getJSON(LS.accountsCache, []); }
+    }
+    const bundles = await idbGetAll(IDB_ACCOUNTS);
+    const pending = bundles.filter(b => !b.accountSynced).map(b => ({
+      accountId: 'pending-' + b.clientAccountUID, accountName: b.accountName, head: b.head,
+      openingBalance: b.openingBalance, openingType: b.openingType, status: 'Active', pending: true,
+      accountNumber: b.accountNumber || '', interestRate: b.interestRate || null,
+      accrualFrequency: b.accrualFrequency || '', accrualDate: b.accrualDate || '',
+      incomeAccountId: b.incomeAccountId || '', lastAccrualPostedDate: '', categoryId: b.categoryId || ''
+    }));
+    return [...serverAccounts, ...pending];
+  }
+
+  async function getCategories() {
+    let serverCats = [];
+    const cacheKey = reqCacheKey('getCategories');
+    const cached = getCachedRequest(cacheKey);
+    if (cached) {
+      serverCats = cached;
+    } else {
+      try {
+        const data = await apiGet('getCategories', { deviceToken: deviceToken() });
+        serverCats = data.categories;
+        setJSON(LS.categoriesCache, serverCats);
+        setCachedRequest(cacheKey, serverCats);
+      } catch (e) { serverCats = getJSON(LS.categoriesCache, []); }
+    }
+    const pending = getJSON(LS.pendingCategories, []).map(c => ({ categoryId: 'pending-' + c.clientCategoryUID, categoryName: c.categoryName, head: c.head, pending: true }));
+    return [...serverCats, ...pending];
+  }
+
+  async function getAccountDetails() {
+    let server = [];
+    try { const data = await apiGet('getAccountDetails', { deviceToken: deviceToken() }); server = data.details; setJSON(LS.detailsCache, server); }
+    catch (e) { server = getJSON(LS.detailsCache, []); }
+    const bundles = await idbGetAll(IDB_ACCOUNTS);
+    const pending = [];
+    bundles.forEach(b => {
+      const accId = b.accountSynced ? b.resolvedAccountId : ('pending-' + b.clientAccountUID);
+      (b.details || []).forEach(d => { if (!d.synced) pending.push({ accountId: accId, detailName: d.detailName, detailValue: d.detailValue, pending: true }); });
+    });
+    return [...server, ...pending];
+  }
+
+  async function getAccountDocuments() {
+    let server = [];
+    try { const data = await apiGet('getAccountDocuments', { deviceToken: deviceToken() }); server = data.documents; setJSON(LS.documentsCache, server); }
+    catch (e) { server = getJSON(LS.documentsCache, []); }
+    const bundles = await idbGetAll(IDB_ACCOUNTS);
+    const pending = [];
+    bundles.forEach(b => {
+      const accId = b.accountSynced ? b.resolvedAccountId : ('pending-' + b.clientAccountUID);
+      (b.documents || []).forEach(d => { if (!d.synced) pending.push({ accountId: accId, documentName: d.documentName, driveFileUrl: null, pending: true }); });
+    });
+    return [...server, ...pending];
+  }
+
+  async function getCustomReminders() {
+    const cacheKey = reqCacheKey('getCustomReminders');
+    const cached = getCachedRequest(cacheKey);
+    if (cached) return cached;
+    try {
+      const data = await apiGet('getCustomReminders', { deviceToken: deviceToken() });
+      setJSON(LS.remindersCache, data.reminders);
+      setCachedRequest(cacheKey, data.reminders);
+      return data.reminders;
+    } catch (e) { return getJSON(LS.remindersCache, []); }
+  }
+  async function addCustomReminder(label, dueDate) {
+    const result = await postDirect('addCustomReminder', { label, dueDate, clientReminderUID: uuid() });
+    invalidateRequestCache('getCustomReminders');
+    return result;
+  }
+  async function deleteCustomReminder(reminderId) {
+    const result = await postDirect('deleteCustomReminder', { reminderId });
+    invalidateRequestCache('getCustomReminders');
+    return result;
+  }
+
+  async function getEntries(filters) {
+    let serverEntries = [];
+    const cacheKey = reqCacheKey('getEntries', filters || {});
+    const cached = getCachedRequest(cacheKey);
+    if (cached) {
+      serverEntries = cached;
+    } else {
+      try {
+        const data = await apiGet('getJournalEntries', { deviceToken: deviceToken(), ...filters });
+        serverEntries = data.entries;
+        setCachedRequest(cacheKey, serverEntries);
+        if (!filters || (!filters.accountId && !filters.dateFrom && !filters.dateTo)) setJSON(LS.entriesCache, serverEntries);
+      } catch (e) { serverEntries = getJSON(LS.entriesCache, []); }
+    }
+    const bundles = await idbGetAll(IDB_ENTRIES);
+    const pendingLines = [];
+    bundles.filter(b => !b.entrySynced).forEach(b => {
+      (b.lines || []).forEach(l => {
+        pendingLines.push({
+          entryId: b.clientEntryUID, date: b.date, voucherNo: b.voucherNo,
+          accountId: l.accountId, accountName: l.accountName || l.accountId,
+          debit: Number(l.debit) || 0, credit: Number(l.credit) || 0, narration: b.narration, pending: true
+        });
+      });
+    });
+    const filtered = pendingLines.filter(l => {
+      if (filters && filters.accountId && l.accountId !== filters.accountId) return false;
+      if (filters && filters.dateFrom && l.date < filters.dateFrom) return false;
+      if (filters && filters.dateTo && l.date > filters.dateTo) return false;
+      return true;
+    });
+    return [...serverEntries, ...filtered];
+  }
+
+  function renderSyncStamp() {
+    const el = document.getElementById('syncStamp');
+    onStatusChange((s) => {
+      el.classList.remove('syncing', 'error');
+      let label;
+      if (s.syncing) { el.classList.add('syncing'); label = 'Syncing…'; }
+      else if (s.error) { el.classList.add('error'); label = 'Sync issue · ' + s.pendingCount + ' pending'; }
+      else if (s.pendingCount > 0) { el.classList.add('syncing'); label = s.pendingCount + ' pending'; }
+      else { const t = s.lastSync ? new Date(s.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'; label = 'Synced · ' + t; }
+      el.innerHTML = `<span class="sync-dot"></span>${label}`;
+    });
+  }
+
+  return {
+    auth, uuid, money, postDirect,
+    queueCategory, queueAccountBundle, queueEntryBundle,
+    startSyncLoop, getAccounts, getCategories, getAccountDetails, getAccountDocuments, getEntries,
+    getAccountsCacheSync, getCategoriesCacheSync, getEntriesCacheSync,
+    getCustomReminders, addCustomReminder, deleteCustomReminder, invalidateRequestCache,
+    renderSyncStamp, onStatusChange
+  };
+})();
+
+function getFieldGroup(fromEl) {
+  const scope = fromEl.closest('.modal-card, .lock-card, .main') || document;
+  return Array.from(scope.querySelectorAll('input, select'))
+    .filter(el => el.offsetParent !== null && !el.disabled && el.type !== 'hidden' && el.type !== 'file');
+}
+document.addEventListener('keydown', (e) => {
+  const el = document.activeElement;
+  if (!el || !(el.tagName === 'INPUT' || el.tagName === 'SELECT')) return;
+  let dir = 0;
+  if (e.key === 'Enter') dir = 1;
+  else if (e.key === 'ArrowDown' && el.type !== 'number') dir = 1;
+  else if (e.key === 'ArrowUp' && el.type !== 'number') dir = -1;
+  else return;
+  const fields = getFieldGroup(el);
+  const idx = fields.indexOf(el);
+  if (idx === -1) return;
+  const next = fields[idx + dir];
+  if (next) {
+    e.preventDefault();
+    next.focus();
+    if (next.select && next.type !== 'date') next.select();
+  }
+});
+
+const DEBIT_NORMAL = ['Assets', 'Expense'];
+const HEAD_ORDER = ['Assets', 'Liabilities', 'Income', 'Expense'];
+
+function computeBalances(accounts, entries) {
+  const byAccount = {};
+  accounts.forEach(a => {
+    const normalSide = DEBIT_NORMAL.includes(a.head) ? 'Dr' : 'Cr';
+    const openingSigned = (a.openingType === normalSide) ? (a.openingBalance || 0) : -(a.openingBalance || 0);
+    byAccount[a.accountId] = openingSigned;
+  });
+  entries.forEach(e => {
+    if (!(e.accountId in byAccount)) return;
+    const acc = accounts.find(a => a.accountId === e.accountId);
+    const normalSide = DEBIT_NORMAL.includes(acc.head) ? 'Dr' : 'Cr';
+    byAccount[e.accountId] += normalSide === 'Dr' ? (e.debit - e.credit) : (e.credit - e.debit);
+  });
+  return byAccount;
+}
+function groupLabelSort(labels, groups) {
+  return labels.sort((x, y) => {
+    const gx = groups[x], gy = groups[y];
+    if (gx.headIdx !== gy.headIdx) return gx.headIdx - gy.headIdx;
+    return gx.catName.localeCompare(gy.catName);
+  });
+}
+
+let activePickers = [];
+function refreshAllPickers(accounts, categories) {
+  activePickers = activePickers.filter(p => document.contains(p.el));
+  activePickers.forEach(p => p.updateData(accounts, categories));
+}
+function createAccountPicker(container, opts) {
+  container.classList.add('acct-picker-wrap');
+  container.innerHTML = `
+    <input type="text" class="acct-picker-input" placeholder="${opts.placeholder || 'Search account…'}" autocomplete="off">
+    <div class="acct-picker-list"></div>`;
+  const input = container.querySelector('.acct-picker-input');
+  const list = container.querySelector('.acct-picker-list');
+  let accounts = opts.accounts || [];
+  let categories = opts.categories || [];
+  let selectedId = '';
+
+  function render(query) {
+    const q = (query || '').trim().toLowerCase();
+    const filtered = q ? accounts.filter(a => a.accountName.toLowerCase().includes(q)) : accounts;
+    if (filtered.length === 0) { list.innerHTML = '<div class="acct-picker-empty">No matching accounts</div>'; list.classList.add('open'); return; }
+
+    const catMap = {};
+    categories.forEach(c => catMap[c.categoryId] = c);
+    const groups = {};
+    filtered.forEach(a => {
+      const cat = catMap[a.categoryId];
+      const label = cat ? `${a.head} — ${cat.categoryName}` : `${a.head} — Uncategorized`;
+      if (!groups[label]) groups[label] = { headIdx: HEAD_ORDER.indexOf(a.head), catName: cat ? cat.categoryName : '\uFFFF', accounts: [] };
+      groups[label].accounts.push(a);
+    });
+    const labels = groupLabelSort(Object.keys(groups), groups);
+    list.innerHTML = labels.map(label => `
+      <div class="acct-picker-group">${label}</div>
+      ${groups[label].accounts.map(a => `<div class="acct-picker-item" data-id="${a.accountId}">${a.accountName}</div>`).join('')}
+    `).join('');
+    list.classList.add('open');
+    list.querySelectorAll('.acct-picker-item').forEach(item => {
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const id = item.dataset.id;
+        const acc = accounts.find(a => a.accountId === id);
+        selectedId = id;
+        input.value = acc ? acc.accountName : '';
+        list.classList.remove('open');
+        if (opts.onSelect) opts.onSelect(id);
+      });
+    });
+  }
+
+  input.addEventListener('focus', () => render(input.value));
+  input.addEventListener('input', () => { selectedId = ''; render(input.value); if (opts.onSelect) opts.onSelect(''); });
+  input.addEventListener('blur', () => setTimeout(() => list.classList.remove('open'), 150));
+
+  if (opts.initialId) {
+    const acc = accounts.find(a => a.accountId === opts.initialId);
+    if (acc) { input.value = acc.accountName; selectedId = opts.initialId; }
+  }
+
+  const pickerObj = {
+    el: container,
+    getValue: () => selectedId,
+    setValue: (id) => { const acc = accounts.find(a => a.accountId === id); selectedId = id; input.value = acc ? acc.accountName : ''; },
+    updateData: (newAccounts, newCategories) => { accounts = newAccounts; categories = newCategories; }
+  };
+  activePickers.push(pickerObj);
+  return pickerObj;
+}
+
+function toDateOnly(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function fmtDate(d) { return d.toISOString().slice(0, 10); }
+function daysBetween(a, b) { return Math.round((b - a) / 86400000); }
+
+function nextDueDate(acc) {
+  if (!acc.accrualFrequency || !acc.accrualDate) return null;
+  const base = toDateOnly(new Date(acc.lastAccrualPostedDate || acc.accrualDate));
+  if (acc.accrualFrequency === 'Maturity') { if (acc.lastAccrualPostedDate) return null; return toDateOnly(new Date(acc.accrualDate)); }
+  if (acc.accrualFrequency === 'Monthly') {
+    const day = Number(acc.accrualDate.split('-')[2]);
+    let candidate = new Date(base.getFullYear(), base.getMonth(), day);
+    if (candidate <= base) candidate = new Date(base.getFullYear(), base.getMonth() + 1, day);
+    return candidate;
+  }
+  if (acc.accrualFrequency === 'Yearly') {
+    const parts = acc.accrualDate.split('-');
+    const mm = Number(parts[1]), dd = Number(parts[2]);
+    let candidate = new Date(base.getFullYear(), mm - 1, dd);
+    if (candidate <= base) candidate = new Date(base.getFullYear() + 1, mm - 1, dd);
+    return candidate;
+  }
+  return null;
+}
+function estimateInterest(acc, balance) {
+  if (!acc.interestRate || balance <= 0) return 0;
+  if (acc.accrualFrequency === 'Monthly') return Math.round(balance * (acc.interestRate / 100) / 12 * 100) / 100;
+  if (acc.accrualFrequency === 'Yearly') return Math.round(balance * (acc.interestRate / 100) * 100) / 100;
+  return 0;
+}
+async function computeReminders() {
+  const accounts = await LEDGER.getAccounts();
+  const entries = await LEDGER.getEntries();
+  const balances = computeBalances(accounts, entries);
+  const today = toDateOnly(new Date());
+  const list = [];
+  accounts.forEach(a => {
+    if (a.head !== 'Assets' || !a.accrualFrequency) return;
+    const due = nextDueDate(a);
+    if (!due) return;
+    const diff = daysBetween(today, due);
+    if (diff <= 7) list.push({ kind: 'interest', account: a, dueDate: due, diff, suggestedAmount: estimateInterest(a, balances[a.accountId] || 0) });
+  });
+
+  const customReminders = await LEDGER.getCustomReminders();
+  customReminders.forEach(r => {
+    const due = toDateOnly(new Date(r.dueDate));
+    const diff = daysBetween(today, due);
+    if (diff <= 7) list.push({ kind: 'custom', reminderId: r.reminderId, label: r.label, dueDate: due, diff });
+  });
+
+  list.sort((x, y) => x.dueDate - y.dueDate);
+  return list;
+}
+async function refreshReminders() {
+  const list = await computeReminders();
+  const badge = document.getElementById('bellBadge');
+  const btn = document.getElementById('bellBtn');
+  const listEl = document.getElementById('bellList');
+  if (list.length === 0) {
+    badge.style.display = 'none'; btn.classList.remove('has-due');
+    listEl.innerHTML = '<div class="empty-state" style="padding:24px 16px;">Nothing due in the next 7 days.</div>';
+    return;
+  }
+  badge.style.display = 'flex'; badge.textContent = list.length; btn.classList.add('has-due');
+  listEl.innerHTML = list.map((item, idx) => {
+    const overdue = item.diff < 0;
+    const label = overdue ? `Overdue by ${Math.abs(item.diff)} day${Math.abs(item.diff) === 1 ? '' : 's'}` : (item.diff === 0 ? 'Due today' : `Due in ${item.diff} day${item.diff === 1 ? '' : 's'}`);
+    if (item.kind === 'custom') {
+      return `
+        <div class="bell-item custom-reminder-item">
+          <div class="acc-name">${item.label}</div>
+          <div class="due-line ${overdue ? 'overdue' : 'upcoming'}">${label} · ${fmtDate(item.dueDate)}</div>
+          <button class="btn ghost small" data-done-idx="${idx}">✓ Done</button>
+        </div>`;
+    }
+    return `
+      <div class="bell-item">
+        <div class="acc-name">${item.account.accountName}</div>
+        <div class="due-line ${overdue ? 'overdue' : 'upcoming'}">${label} · ${fmtDate(item.dueDate)}</div>
+        <button class="btn" data-reminder-idx="${idx}">Post interest entry</button>
+      </div>`;
+  }).join('');
+  listEl.querySelectorAll('[data-reminder-idx]').forEach(btn2 => btn2.addEventListener('click', () => openInterestModal(list[Number(btn2.dataset.reminderIdx)])));
+  listEl.querySelectorAll('[data-done-idx]').forEach(btn2 => btn2.addEventListener('click', async () => {
+    const item = list[Number(btn2.dataset.doneIdx)];
+    btn2.disabled = true;
+    try { await LEDGER.deleteCustomReminder(item.reminderId); refreshReminders(); }
+    catch (e) { btn2.disabled = false; }
+  }));
+}
+function openInterestModal(item) {
+  document.getElementById('bellPanel').classList.remove('open');
+  const acc = item.account;
+  const incomeAcc = ACCOUNTS_CACHE.find(a => a.accountId === acc.incomeAccountId);
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <h3>Post interest — ${acc.accountName}</h3>
+      <div id="interestModalMsg"></div>
+      <label>Date</label>
+      <input type="date" id="imDate" value="${fmtDate(item.dueDate)}">
+      <label>Amount</label>
+      <input type="number" step="0.01" id="imAmount" value="${item.suggestedAmount || ''}" placeholder="Enter amount">
+      <p style="font-size:0.76rem;color:var(--ink-soft);margin:-8px 0 12px;">
+        ${item.suggestedAmount ? 'Estimated — please verify against your statement.' : 'No estimate available — enter the amount from your statement.'}
+        Credits to: ${incomeAcc ? incomeAcc.accountName : '(no income account linked)'}
+      </p>
+      <label>Narration</label>
+      <input type="text" id="imNarration" value="Interest accrued — ${acc.accountName}">
+      <div style="display:flex;gap:10px;margin-top:6px;">
+        <button class="btn" id="imPost">Post entry</button>
+        <button class="btn ghost" id="imCancel">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#imCancel').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('#imPost').addEventListener('click', () => {
+    const date = overlay.querySelector('#imDate').value;
+    const amount = Number(overlay.querySelector('#imAmount').value) || 0;
+    const narration = overlay.querySelector('#imNarration').value.trim();
+    const msgEl = overlay.querySelector('#interestModalMsg');
+    if (!acc.incomeAccountId) { msgEl.innerHTML = '<div class="error-msg">This account has no linked income account. Edit it under Accounts first.</div>'; return; }
+    if (!date || amount <= 0) { msgEl.innerHTML = '<div class="error-msg">Enter a valid date and amount.</div>'; return; }
+    const clientEntryUID = LEDGER.uuid();
+    const bundle = {
+      clientEntryUID, date, voucherNo: clientEntryUID, narration,
+      lines: [
+        { accountId: acc.accountId, accountName: acc.accountName, debit: amount, credit: 0 },
+        { accountId: acc.incomeAccountId, accountName: incomeAcc ? incomeAcc.accountName : acc.incomeAccountId, debit: 0, credit: amount }
+      ],
+      accrualAccountId: acc.accountId, accrualDate: date,
+      entrySynced: false, supportingDocs: []
+    };
+    LEDGER.queueEntryBundle(bundle);
+    overlay.remove();
+    refreshReminders();
+    if (document.getElementById('view-dashboard').classList.contains('active')) loadDashboard();
+  });
+}
+
+const VIEWS = {
+  dashboard: { title: 'Dashboard', sub: 'Tap a tile to get started.', init: loadDashboard },
+  journal: { title: 'New journal entry', sub: 'Every line is saved to this device the instant you post it — sync happens in the background.', init: initJournal },
+  ledger: { title: 'Ledgers', sub: 'Search or browse an account to see its full history with running balance.', init: loadLedgerView },
+  accounts: { title: 'Accounts', sub: 'Manage categories and the accounts your journal entries post to.', init: initAccounts },
+  entries: { title: 'Entries in current F.Y.', sub: 'Every journal line posted this financial year, searchable.', init: loadEntriesView },
+  plStatement: { title: 'Profit & Loss', sub: 'Income vs. expense for the selected period.', init: loadPLView },
+  balanceSheet: { title: 'Balance Sheet', sub: 'Assets vs. liabilities as of a chosen date.', init: loadBSView }
+};
+let ACCOUNTS_CACHE = [];
+let CATEGORIES_CACHE = [];
+
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  const navItem = document.querySelector(`.nav-item[data-view="${name}"]`);
+  if (navItem) navItem.classList.add('active');
+  document.getElementById('pageTitle').textContent = VIEWS[name].title;
+  document.getElementById('pageSub').textContent = VIEWS[name].sub;
+  location.hash = name;
+  VIEWS[name].init();
+}
+
+function handleTileClick(tile) {
+  if (tile === 'newCategory') {
+    switchView('accounts');
+    setTimeout(() => { const el = document.getElementById('newCatName'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.focus(); }, 60);
+    return;
+  }
+  if (tile === 'newAccount') {
+    switchView('accounts');
+    setTimeout(() => { const el = document.getElementById('accName'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.focus(); }, 60);
+    return;
+  }
+  switchView(tile);
+}
+
+function renderDashboardUI(accounts, entries) {
+  const heads = HEAD_ORDER;
+  const balMap = computeBalances(accounts, entries);
+  const balances = {}; heads.forEach(h => balances[h] = 0);
+  accounts.forEach(a => { balances[a.head] = (balances[a.head] || 0) + (balMap[a.accountId] || 0); });
+
+  document.getElementById('statRow').innerHTML = heads.map(h => `
+    <div class="stat-card"><div class="label">${h}</div><div class="value">${LEDGER.money(balances[h])}</div></div>`).join('');
+
+  const recentWrap = document.getElementById('recentWrap');
+  const sorted = entries.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 12);
+  if (sorted.length === 0) {
+    recentWrap.innerHTML = `<div class="empty-state"><div class="eyebrow">No entries yet</div>Post your first journal entry to see it here.</div>`;
+  } else {
+    recentWrap.innerHTML = `
+      <table class="ledger">
+        <thead><tr><th>Date</th><th>Account</th><th>Narration</th><th>Debit</th><th>Credit</th></tr></thead>
+        <tbody>
+          ${sorted.map(e => `
+            <tr>
+              <td>${e.date}${e.pending ? ' <span class="pill Expense">pending</span>' : ''}</td>
+              <td>${e.accountName}</td>
+              <td>${e.narration || ''}</td>
+              <td class="num debit">${e.debit ? LEDGER.money(e.debit) : ''}</td>
+              <td class="num credit">${e.credit ? LEDGER.money(e.credit) : ''}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+}
+async function loadDashboard() {
+  const cachedAccounts = LEDGER.getAccountsCacheSync();
+  const cachedEntries = LEDGER.getEntriesCacheSync();
+  if (cachedAccounts.length) { ACCOUNTS_CACHE = cachedAccounts; renderDashboardUI(cachedAccounts, cachedEntries); }
+
+  const [accounts, entries] = await Promise.all([LEDGER.getAccounts(), LEDGER.getEntries()]);
+  ACCOUNTS_CACHE = accounts;
+  renderDashboardUI(accounts, entries);
+}
+
+let currentSupportingDocs = [];
+function makeLine(kind) {
+  const div = document.createElement('div');
+  div.className = 'je-line ' + (kind === 'debit' ? 'debit-line' : 'credit-line');
+  div.innerHTML = kind === 'debit'
+    ? `<div class="je-acct"></div><span class="dr-label">Dr</span><input type="number" step="0.01" class="line-amount" placeholder="Amount"><button class="je-remove" type="button" title="Remove line">×</button>`
+    : `<span class="to-label">To</span><div class="je-acct"></div><input type="number" step="0.01" class="line-amount" placeholder="Amount"><button class="je-remove" type="button" title="Remove line">×</button>`;
+  return div;
+}
+function addDebitLine() {
+  const wrap = document.getElementById('debitLines');
+  const row = makeLine('debit');
+  wrap.appendChild(row);
+  row._picker = createAccountPicker(row.querySelector('.je-acct'), { accounts: ACCOUNTS_CACHE, categories: CATEGORIES_CACHE, placeholder: 'Search account…' });
+  wireLine(row); recalcTotals();
+}
+function addCreditLine() {
+  const wrap = document.getElementById('creditLines');
+  const row = makeLine('credit');
+  wrap.appendChild(row);
+  row._picker = createAccountPicker(row.querySelector('.je-acct'), { accounts: ACCOUNTS_CACHE, categories: CATEGORIES_CACHE, placeholder: 'Search account…' });
+  wireLine(row); recalcTotals();
+}
+function wireLine(row) {
+  row.querySelector('.line-amount').addEventListener('input', recalcTotals);
+  row.querySelector('.je-remove').addEventListener('click', () => { row.remove(); recalcTotals(); });
+}
+function recalcTotals() {
+  let td = 0, tc = 0;
+  document.querySelectorAll('#debitLines .line-amount').forEach(inp => td += Number(inp.value) || 0);
+  document.querySelectorAll('#creditLines .line-amount').forEach(inp => tc += Number(inp.value) || 0);
+  document.getElementById('totDebit').textContent = LEDGER.money(td);
+  document.getElementById('totCredit').textContent = LEDGER.money(tc);
+  const flag = document.getElementById('balanceFlag');
+  const balanced = td > 0 && Math.round(td * 100) === Math.round(tc * 100);
+  flag.textContent = balanced ? 'Balanced ✓' : 'Unbalanced';
+  flag.className = balanced ? 'balanced' : 'unbalanced';
+  return balanced;
+}
+function collectLines() {
+  const lines = [];
+  document.querySelectorAll('#debitLines .je-line').forEach(row => {
+    const accountId = row._picker ? row._picker.getValue() : '';
+    const amt = Number(row.querySelector('.line-amount').value) || 0;
+    if (!accountId || amt === 0) return;
+    const acc = ACCOUNTS_CACHE.find(a => a.accountId === accountId);
+    lines.push({ accountId, accountName: acc ? acc.accountName : accountId, debit: amt, credit: 0 });
+  });
+  document.querySelectorAll('#creditLines .je-line').forEach(row => {
+    const accountId = row._picker ? row._picker.getValue() : '';
+    const amt = Number(row.querySelector('.line-amount').value) || 0;
+    if (!accountId || amt === 0) return;
+    const acc = ACCOUNTS_CACHE.find(a => a.accountId === accountId);
+    lines.push({ accountId, accountName: acc ? acc.accountName : accountId, debit: 0, credit: amt });
+  });
+  return lines;
+}
+function renderSupportingDocsList() {
+  const wrap = document.getElementById('supportingDocsList');
+  if (currentSupportingDocs.length === 0) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = currentSupportingDocs.map((d, idx) => `<span class="doc-chip">📎 ${d.fileName}<button class="chip-del" type="button" data-idx="${idx}">×</button></span>`).join('');
+  wrap.querySelectorAll('.chip-del').forEach(btn => btn.addEventListener('click', () => {
+    currentSupportingDocs.splice(Number(btn.dataset.idx), 1);
+    renderSupportingDocsList();
+  }));
+}
+function showJeMsg(html, ok) { document.getElementById('jeMsg').innerHTML = `<div class="${ok ? 'ok-msg' : 'error-msg'}">${html}</div>`; }
+function resetJournalForm() {
+  document.getElementById('jeNarration').value = '';
+  document.getElementById('debitLines').innerHTML = '';
+  document.getElementById('creditLines').innerHTML = '';
+  addDebitLine(); addCreditLine();
+  currentSupportingDocs = [];
+  renderSupportingDocsList();
+  recalcTotals();
+}
+async function initJournal() {
+  document.getElementById('jeDate').value = document.getElementById('jeDate').value || new Date().toISOString().slice(0, 10);
+  ACCOUNTS_CACHE = LEDGER.getAccountsCacheSync();
+  CATEGORIES_CACHE = LEDGER.getCategoriesCacheSync();
+  resetJournalForm();
+  if (ACCOUNTS_CACHE.length === 0) showJeMsg('Loading your accounts…', true);
+  else document.getElementById('jeMsg').innerHTML = '';
+
+  const [accounts, categories] = await Promise.all([LEDGER.getAccounts(), LEDGER.getCategories()]);
+  ACCOUNTS_CACHE = accounts;
+  CATEGORIES_CACHE = categories;
+  refreshAllPickers(accounts, categories);
+  if (accounts.length === 0) showJeMsg('You have no accounts yet. Go to <b>Accounts</b> and add some before posting entries.', false);
+  else document.getElementById('jeMsg').innerHTML = '';
+}
+
+function currentFYStart() {
+  const now = new Date();
+  const year = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+  return `${year}-04-01`;
+}
+let ledgerPicker = null;
+let acctPanelEditMode = false;
+function selectLedgerAccount(accountId) {
+  ledgerPicker.setValue(accountId);
+  acctPanelEditMode = false;
+  refreshLedgerTable();
+  refreshAccountDetailsPanel();
+  document.getElementById('acctDetailsPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function renderLedgerBrowseList() {
+  const wrap = document.getElementById('ledgerBrowseList');
+  const q = document.getElementById('ledgerBrowseSearch').value.trim().toLowerCase();
+  const filtered = q ? ACCOUNTS_CACHE.filter(a => a.accountName.toLowerCase().includes(q)) : ACCOUNTS_CACHE;
+  if (filtered.length === 0) { wrap.innerHTML = '<div class="empty-state">No matching accounts.</div>'; return; }
+  let html = '';
+  HEAD_ORDER.forEach(h => {
+    const list = filtered.filter(a => a.head === h);
+    if (list.length === 0) return;
+    html += `<div class="subhead-label">${h}</div>`;
+    html += list.map(a => `<div class="browse-row" data-id="${a.accountId}">${a.accountName}${a.pending ? ' <span class="pill Expense">pending</span>' : ''}</div>`).join('');
+  });
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.browse-row').forEach(row => row.addEventListener('click', () => selectLedgerAccount(row.dataset.id)));
+}
+async function loadLedgerView() {
+  ACCOUNTS_CACHE = LEDGER.getAccountsCacheSync();
+  CATEGORIES_CACHE = LEDGER.getCategoriesCacheSync();
+  if (!ledgerPicker) {
+    ledgerPicker = createAccountPicker(document.getElementById('fAccountContainer'), {
+      accounts: ACCOUNTS_CACHE, categories: CATEGORIES_CACHE, placeholder: 'Search account…',
+      onSelect: () => { acctPanelEditMode = false; refreshLedgerTable(); refreshAccountDetailsPanel(); }
+    });
+  } else {
+    ledgerPicker.updateData(ACCOUNTS_CACHE, CATEGORIES_CACHE);
+  }
+  const fFrom = document.getElementById('fFrom');
+  const fTo = document.getElementById('fTo');
+  if (!fFrom.value) fFrom.value = currentFYStart();
+  if (!fTo.value) fTo.value = new Date().toISOString().slice(0, 10);
+  fFrom.onchange = refreshLedgerTable;
+  fTo.onchange = refreshLedgerTable;
+  document.getElementById('ledgerBrowseSearch').oninput = renderLedgerBrowseList;
+  renderLedgerBrowseList();
+  refreshLedgerTable();
+  refreshAccountDetailsPanel();
+
+  const [accounts, categories] = await Promise.all([LEDGER.getAccounts(), LEDGER.getCategories()]);
+  ACCOUNTS_CACHE = accounts; CATEGORIES_CACHE = categories;
+  ledgerPicker.updateData(accounts, categories);
+  renderLedgerBrowseList();
+}
+
+/* ---------- ENTRIES (day book, current F.Y.) ---------- */
+async function loadEntriesView() {
+  const from = document.getElementById('entriesFrom');
+  const to = document.getElementById('entriesTo');
+  if (!from.value) from.value = currentFYStart();
+  if (!to.value) to.value = new Date().toISOString().slice(0, 10);
+  from.onchange = renderEntriesTable;
+  to.onchange = renderEntriesTable;
+  document.getElementById('entriesSearch').oninput = renderEntriesTable;
+  await renderEntriesTable();
+}
+async function renderEntriesTable() {
+  const wrap = document.getElementById('entriesWrap');
+  const dateFrom = document.getElementById('entriesFrom').value;
+  const dateTo = document.getElementById('entriesTo').value;
+  const q = document.getElementById('entriesSearch').value.trim().toLowerCase();
+  const entries = await LEDGER.getEntries({ dateFrom: dateFrom || undefined, dateTo: dateTo || undefined });
+  let rows = entries.slice().sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.voucherNo || '').localeCompare(b.voucherNo || ''));
+  if (q) rows = rows.filter(e => (e.narration || '').toLowerCase().includes(q) || (e.accountName || '').toLowerCase().includes(q) || (e.voucherNo || '').toLowerCase().includes(q));
+  if (rows.length === 0) { wrap.innerHTML = '<div class="empty-state"><div class="eyebrow">No entries</div>Nothing matches in this range.</div>'; return; }
+  wrap.innerHTML = `
+    <table class="ledger">
+      <thead><tr><th>Date</th><th>Voucher</th><th>Account</th><th>Narration</th><th>Debit</th><th>Credit</th></tr></thead>
+      <tbody>
+        ${rows.map(e => `
+          <tr>
+            <td>${e.date}${e.pending ? ' <span class="pill Expense">pending</span>' : ''}</td>
+            <td style="font-family:var(--font-mono);font-size:0.78rem;">${e.voucherNo || ''}</td>
+            <td>${e.accountName}</td>
+            <td>${e.narration || ''}</td>
+            <td class="num debit">${e.debit ? LEDGER.money(e.debit) : ''}</td>
+            <td class="num credit">${e.credit ? LEDGER.money(e.credit) : ''}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+/* ---------- PROFIT & LOSS ---------- */
+async function loadPLView() {
+  const from = document.getElementById('plFrom');
+  const to = document.getElementById('plTo');
+  if (!from.value) from.value = currentFYStart();
+  if (!to.value) to.value = new Date().toISOString().slice(0, 10);
+  from.onchange = renderPL;
+  to.onchange = renderPL;
+  await renderPL();
+}
+function categoryGroupedRows(accounts, byAccount, head, categories) {
+  const accs = accounts.filter(a => a.head === head);
+  const byCat = {};
+  accs.forEach(a => { const key = a.categoryId || '__none__'; if (!byCat[key]) byCat[key] = []; byCat[key].push(a); });
+  let total = 0;
+  let html = '';
+  Object.keys(byCat).sort((x, y) => {
+    if (x === '__none__') return 1; if (y === '__none__') return -1;
+    const cx = categories.find(c => c.categoryId === x); const cy = categories.find(c => c.categoryId === y);
+    return (cx ? cx.categoryName : '').localeCompare(cy ? cy.categoryName : '');
+  }).forEach(key => {
+    const catName = key === '__none__' ? 'Uncategorized' : ((categories.find(c => c.categoryId === key) || {}).categoryName || 'Unknown');
+    let catTotal = 0;
+    const rows = byCat[key].map(a => {
+      const v = byAccount[a.accountId] || 0;
+      catTotal += v;
+      return `<tr><td style="padding-left:18px;">${a.accountName}</td><td class="num">${LEDGER.money(v)}</td></tr>`;
+    }).join('');
+    total += catTotal;
+    html += `<tr><td style="font-weight:600;">${catName}</td><td class="num" style="font-weight:600;">${LEDGER.money(catTotal)}</td></tr>${rows}`;
+  });
+  return { html, total };
+}
+async function renderPL() {
+  const wrap = document.getElementById('plWrap');
+  const dateFrom = document.getElementById('plFrom').value;
+  const dateTo = document.getElementById('plTo').value;
+  const [accounts, categories, entries] = await Promise.all([LEDGER.getAccounts(), LEDGER.getCategories(), LEDGER.getEntries({ dateFrom: dateFrom || undefined, dateTo: dateTo || undefined })]);
+  const byAccount = {};
+  accounts.forEach(a => { if (a.head === 'Income' || a.head === 'Expense') byAccount[a.accountId] = 0; });
+  entries.forEach(e => {
+    if (!(e.accountId in byAccount)) return;
+    const acc = accounts.find(a => a.accountId === e.accountId);
+    byAccount[e.accountId] += acc.head === 'Income' ? ((e.credit || 0) - (e.debit || 0)) : ((e.debit || 0) - (e.credit || 0));
+  });
+  const income = categoryGroupedRows(accounts, byAccount, 'Income', categories);
+  const expense = categoryGroupedRows(accounts, byAccount, 'Expense', categories);
+  const net = income.total - expense.total;
+  wrap.innerHTML = `
+    <div class="stat-row">
+      <div class="stat-card"><div class="label">Total Income</div><div class="value">${LEDGER.money(income.total)}</div></div>
+      <div class="stat-card"><div class="label">Total Expense</div><div class="value">${LEDGER.money(expense.total)}</div></div>
+      <div class="stat-card"><div class="label">${net >= 0 ? 'Net Profit' : 'Net Loss'}</div><div class="value" style="color:${net >= 0 ? 'var(--credit-green)' : 'var(--debit-red)'};">${LEDGER.money(Math.abs(net))}</div></div>
+    </div>
+    <table class="ledger">
+      <thead><tr><th>Income</th><th class="num">Amount</th></tr></thead>
+      <tbody>${income.html || '<tr><td colspan="2" style="color:var(--ink-soft);">No income accounts.</td></tr>'}</tbody>
+    </table>
+    <table class="ledger" style="margin-top:20px;">
+      <thead><tr><th>Expense</th><th class="num">Amount</th></tr></thead>
+      <tbody>${expense.html || '<tr><td colspan="2" style="color:var(--ink-soft);">No expense accounts.</td></tr>'}</tbody>
+    </table>`;
+}
+
+/* ---------- BALANCE SHEET ---------- */
+function computeBalancesAsOf(accounts, entries, asOfDate) {
+  const byAccount = {};
+  accounts.forEach(a => {
+    const normalSide = DEBIT_NORMAL.includes(a.head) ? 'Dr' : 'Cr';
+    const openingSigned = (a.openingType === normalSide) ? (a.openingBalance || 0) : -(a.openingBalance || 0);
+    byAccount[a.accountId] = openingSigned;
+  });
+  entries.forEach(e => {
+    if (asOfDate && e.date > asOfDate) return;
+    if (!(e.accountId in byAccount)) return;
+    const acc = accounts.find(a => a.accountId === e.accountId);
+    const normalSide = DEBIT_NORMAL.includes(acc.head) ? 'Dr' : 'Cr';
+    byAccount[e.accountId] += normalSide === 'Dr' ? ((e.debit || 0) - (e.credit || 0)) : ((e.credit || 0) - (e.debit || 0));
+  });
+  return byAccount;
+}
+async function loadBSView() {
+  const asOf = document.getElementById('bsAsOf');
+  if (!asOf.value) asOf.value = new Date().toISOString().slice(0, 10);
+  asOf.onchange = renderBS;
+  await renderBS();
+}
+async function renderBS() {
+  const wrap = document.getElementById('bsWrap');
+  const asOfDate = document.getElementById('bsAsOf').value;
+  const [accounts, categories, entries] = await Promise.all([LEDGER.getAccounts(), LEDGER.getCategories(), LEDGER.getEntries({ dateTo: asOfDate || undefined })]);
+  const byAccount = computeBalancesAsOf(accounts, entries, asOfDate);
+  const assets = categoryGroupedRows(accounts, byAccount, 'Assets', categories);
+  const liabilities = categoryGroupedRows(accounts, byAccount, 'Liabilities', categories);
+  const netWorth = assets.total - liabilities.total;
+  wrap.innerHTML = `
+    <div class="stat-row">
+      <div class="stat-card"><div class="label">Total Assets</div><div class="value">${LEDGER.money(assets.total)}</div></div>
+      <div class="stat-card"><div class="label">Total Liabilities</div><div class="value">${LEDGER.money(liabilities.total)}</div></div>
+      <div class="stat-card"><div class="label">Net Worth</div><div class="value" style="color:${netWorth >= 0 ? 'var(--credit-green)' : 'var(--debit-red)'};">${LEDGER.money(netWorth)}</div></div>
+    </div>
+    <table class="ledger">
+      <thead><tr><th>Assets</th><th class="num">Balance</th></tr></thead>
+      <tbody>${assets.html || '<tr><td colspan="2" style="color:var(--ink-soft);">No asset accounts.</td></tr>'}</tbody>
+    </table>
+    <table class="ledger" style="margin-top:20px;">
+      <thead><tr><th>Liabilities</th><th class="num">Balance</th></tr></thead>
+      <tbody>${liabilities.html || '<tr><td colspan="2" style="color:var(--ink-soft);">No liability accounts.</td></tr>'}</tbody>
+    </table>`;
+}
+
+function showAcctDetailsMsg(html, ok) { document.getElementById('acctDetailsMsg').innerHTML = html ? `<div class="${ok ? 'ok-msg' : 'error-msg'}">${html}</div>` : ''; }
+
+async function refreshAccountDetailsPanel() {
+  const accountId = ledgerPicker ? ledgerPicker.getValue() : '';
+  const panel = document.getElementById('acctDetailsPanel');
+  if (!accountId) { panel.style.display = 'none'; return; }
+  const acc = ACCOUNTS_CACHE.find(a => a.accountId === accountId);
+  if (!acc) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  document.getElementById('acctDetailsTitle').textContent = `${acc.accountName} — details & documents`;
+  document.getElementById('acctDetailsEditBtn').textContent = acctPanelEditMode ? '✓ Done' : '✎ Edit';
+  showAcctDetailsMsg('');
+
+  const [details, documents] = await Promise.all([LEDGER.getAccountDetails(), LEDGER.getAccountDocuments()]);
+  const myDetails = details.filter(d => d.accountId === accountId);
+  const myDocs = documents.filter(d => d.accountId === accountId);
+  const cat = CATEGORIES_CACHE.find(c => c.categoryId === acc.categoryId);
+
+  const infoItems = [
+    ['Head', acc.head], ['Category', cat ? cat.categoryName : '—'],
+    ['Account no.', acc.accountNumber || '—'], ['Opening balance', `${LEDGER.money(acc.openingBalance)} ${acc.openingType}`]
+  ];
+  if (acc.accrualFrequency) { infoItems.push(['Interest rate', `${acc.interestRate || 0}% p.a.`]); infoItems.push(['Accrual', acc.accrualFrequency]); }
+  let html = `<div class="acct-info-grid">${infoItems.map(([k, v]) => `<div class="acct-info-item"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div>`;
+
+  html += `<div class="subhead-label">Additional details</div>`;
+  if (!acctPanelEditMode) {
+    if (myDetails.length === 0) {
+      html += `<p style="font-size:0.85rem;color:var(--ink-soft);margin:0;">No additional details.</p>`;
+    } else {
+      html += `<div class="acct-info-grid">${myDetails.map(d => `<div class="acct-info-item"><div class="k">${d.detailName}${d.pending ? ' · syncing' : ''}</div><div class="v">${d.detailValue || '—'}</div></div>`).join('')}</div>`;
+    }
+  } else {
+    html += `<div id="editDetailRows">${myDetails.map(d => `
+      <div class="edit-detail-row" data-detail-id="${d.detailId || ''}">
+        <div class="dk">${d.detailName}</div>
+        <input type="text" class="edit-detail-value" value="${(d.detailValue || '').replace(/"/g, '&quot;')}" ${d.pending ? 'disabled' : ''}>
+        <button class="je-remove" type="button" data-del-detail="${d.detailId || ''}" ${d.pending ? 'disabled' : ''}>×</button>
+      </div>`).join('')}</div>
+      <div class="edit-detail-row">
+        <input type="text" id="newDetailName" placeholder="Detail name">
+        <input type="text" id="newDetailValue" placeholder="Value">
+        <button class="btn small" id="addDetailInline" type="button" style="padding:6px 8px;">+</button>
+      </div>`;
+  }
+
+  html += `<div class="subhead-label">Documents</div>`;
+  if (!acctPanelEditMode) {
+    if (myDocs.length === 0) {
+      html += `<p style="font-size:0.85rem;color:var(--ink-soft);margin:0;">No documents uploaded.</p>`;
+    } else {
+      html += `<div class="doc-chip-list">${myDocs.map(d =>
+        d.pending || !d.driveFileUrl
+          ? `<span class="doc-chip pending">📄 ${d.documentName} · syncing</span>`
+          : `<a class="doc-chip" href="${d.driveFileUrl}" target="_blank" rel="noopener">📄 ${d.documentName}</a>`
+      ).join('')}</div>`;
+    }
+  } else {
+    html += `<div class="doc-chip-list" id="editDocChips">${myDocs.map(d =>
+      d.pending || !d.driveFileUrl
+        ? `<span class="doc-chip pending">📄 ${d.documentName} · syncing</span>`
+        : `<span class="doc-chip">📄 ${d.documentName}<button class="chip-del" type="button" data-del-doc="${d.documentId}">×</button></span>`
+    ).join('')}</div>
+    <div class="doc-row">
+      <input type="text" id="newDocName" placeholder="What document?">
+      <input type="file" id="newDocFile">
+      <button class="btn small" id="addDocInline" type="button" style="padding:6px 8px;">+</button>
+    </div>`;
+  }
+
+  document.getElementById('acctDetailsBody').innerHTML = html;
+
+  if (acctPanelEditMode) {
+    document.querySelectorAll('#editDetailRows .edit-detail-value').forEach(inp => {
+      const original = inp.value;
+      inp.addEventListener('blur', async () => {
+        const row = inp.closest('.edit-detail-row');
+        const detailId = row.dataset.detailId;
+        if (!detailId || inp.value === original) return;
+        try { await LEDGER.postDirect('updateAccountDetail', { detailId, detailValue: inp.value }); showAcctDetailsMsg('Detail updated.', true); LEDGER.getAccountDetails(); }
+        catch (e) { showAcctDetailsMsg('Could not save — check your connection and try again.', false); }
+      });
+    });
+    document.querySelectorAll('[data-del-detail]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const detailId = btn.dataset.delDetail;
+        if (!detailId) return;
+        btn.disabled = true;
+        try { await LEDGER.postDirect('deleteAccountDetail', { detailId }); refreshAccountDetailsPanel(); }
+        catch (e) { showAcctDetailsMsg('Could not delete — check your connection and try again.', false); btn.disabled = false; }
+      });
+    });
+    document.getElementById('addDetailInline').addEventListener('click', async () => {
+      const name = document.getElementById('newDetailName').value.trim();
+      const value = document.getElementById('newDetailValue').value.trim();
+      if (!name) return;
+      try { await LEDGER.postDirect('addAccountDetail', { accountId, detailName: name, detailValue: value, clientDetailUID: LEDGER.uuid() }); refreshAccountDetailsPanel(); }
+      catch (e) { showAcctDetailsMsg('Could not add — check your connection and try again.', false); }
+    });
+    document.querySelectorAll('[data-del-doc]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const documentId = btn.dataset.delDoc;
+        btn.disabled = true;
+        try { await LEDGER.postDirect('deleteAccountDocument', { documentId }); refreshAccountDetailsPanel(); }
+        catch (e) { showAcctDetailsMsg('Could not delete — check your connection and try again.', false); btn.disabled = false; }
+      });
+    });
+    document.getElementById('addDocInline').addEventListener('click', async () => {
+      const name = document.getElementById('newDocName').value.trim();
+      const fileInput = document.getElementById('newDocFile');
+      const file = fileInput.files[0];
+      if (!name || !file) { showAcctDetailsMsg('Enter a name and choose a file.', false); return; }
+      if (file.size > MAX_FILE_BYTES) { showAcctDetailsMsg('File too large (max 8MB).', false); return; }
+      const btn = document.getElementById('addDocInline');
+      btn.disabled = true; btn.textContent = '…';
+      try {
+        const base64Data = await readFileAsBase64(file);
+        await LEDGER.postDirect('addAccountDocument', { accountId, accountName: acc.accountName, documentName: name, fileName: file.name, mimeType: file.type || 'application/octet-stream', base64Data, clientDocUID: LEDGER.uuid() });
+        refreshAccountDetailsPanel();
+      } catch (e) { showAcctDetailsMsg('Upload failed — check your connection and try again.', false); btn.disabled = false; btn.textContent = '+'; }
+    });
+  }
+}
+
+async function refreshLedgerTable() {
+  const accountId = ledgerPicker ? ledgerPicker.getValue() : '';
+  const dateFrom = document.getElementById('fFrom').value;
+  const dateTo = document.getElementById('fTo').value;
+  const wrap = document.getElementById('ledgerWrap');
+  const titleEl = document.getElementById('ledgerTitle');
+  if (!accountId) { wrap.innerHTML = '<div class="empty-state">Search and choose an account above.</div>'; titleEl.textContent = 'Ledger'; return; }
+
+  const acc = ACCOUNTS_CACHE.find(a => a.accountId === accountId);
+  titleEl.textContent = acc ? `${acc.accountName} · ${acc.head}` : 'Ledger';
+  wrap.innerHTML = '<div class="empty-state">Loading…</div>';
+
+  const entries = await LEDGER.getEntries({ accountId, dateFrom: dateFrom || undefined, dateTo: dateTo || undefined });
+  const sorted = entries.slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const normalSide = acc && DEBIT_NORMAL.includes(acc.head) ? 'Dr' : 'Cr';
+  let balance = acc ? ((acc.openingType === normalSide) ? (acc.openingBalance || 0) : -(acc.openingBalance || 0)) : 0;
+
+  if (sorted.length === 0 && balance === 0) {
+    wrap.innerHTML = '<div class="empty-state"><div class="eyebrow">No transactions</div>No entries recorded for this account in the selected range.</div>';
+    return;
+  }
+  const openingDisplay = acc ? Math.abs((acc.openingType === normalSide) ? acc.openingBalance : -acc.openingBalance) : 0;
+  const rowsHtml = sorted.map(e => {
+    const delta = normalSide === 'Dr' ? (e.debit - e.credit) : (e.credit - e.debit);
+    balance += delta;
+    return `
+      <tr>
+        <td>${e.date}${e.pending ? ' <span class="pill Expense">pending</span>' : ''}</td>
+        <td>${e.narration || ''}</td>
+        <td class="num debit">${e.debit ? LEDGER.money(e.debit) : ''}</td>
+        <td class="num credit">${e.credit ? LEDGER.money(e.credit) : ''}</td>
+        <td class="num balance">${LEDGER.money(balance)} ${balance < 0 ? (normalSide === 'Dr' ? 'Cr' : 'Dr') : normalSide}</td>
+      </tr>`;
+  }).join('');
+  wrap.innerHTML = `
+    <table class="ledger">
+      <thead><tr><th>Date</th><th>Narration</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
+      <tbody>
+        <tr><td colspan="4"><i>Opening balance</i></td><td class="num balance">${LEDGER.money(openingDisplay)} ${acc ? acc.openingType : ''}</td></tr>
+        ${rowsHtml}
+      </tbody>
+    </table>`;
+}
+
+function showAccMsg(html, ok) { document.getElementById('accMsg').innerHTML = `<div class="${ok ? 'ok-msg' : 'error-msg'}">${html}</div>`; }
+function showCatMsg(html, ok) { document.getElementById('catMsg').innerHTML = `<div class="${ok ? 'ok-msg' : 'error-msg'}">${html}</div>`; }
+
+function toggleAssetFields() {
+  const isAsset = document.getElementById('accHead').value === 'Assets';
+  document.getElementById('assetOnlyFields').style.display = isAsset ? 'block' : 'none';
+  if (!isAsset) {
+    document.getElementById('accEarnsInterest').checked = false;
+    document.getElementById('interestFields').style.display = 'none';
+  }
+  refreshCategorySelect();
+}
+function toggleInterestFields() {
+  document.getElementById('interestFields').style.display = document.getElementById('accEarnsInterest').checked ? 'block' : 'none';
+}
+function refreshCategorySelect() {
+  const head = document.getElementById('accHead').value;
+  const sel = document.getElementById('accCategory');
+  const current = sel.value;
+  const cats = CATEGORIES_CACHE.filter(c => c.head === head && !c.pending);
+  sel.innerHTML = '<option value="">No category</option>' + cats.map(c => `<option value="${c.categoryId}">${c.categoryName}</option>`).join('');
+  if (cats.some(c => c.categoryId === current)) sel.value = current;
+}
+function populateIncomeAccountSelect() {
+  const sel = document.getElementById('accIncomeAcc');
+  const current = sel.value;
+  const incomeAccs = ACCOUNTS_CACHE.filter(a => a.head === 'Income');
+  sel.innerHTML = incomeAccs.length === 0
+    ? '<option value="">No income accounts yet — add one first</option>'
+    : incomeAccs.map(a => `<option value="${a.accountId}">${a.accountName}</option>`).join('');
+  if (incomeAccs.some(a => a.accountId === current)) sel.value = current;
+}
+
+function addDetailRow() {
+  const wrap = document.getElementById('detailRows');
+  const row = document.createElement('div');
+  row.className = 'detail-row';
+  row.innerHTML = `
+    <input type="text" class="detail-name" placeholder="Detail name (e.g. CIF, IFSC, Address)">
+    <input type="text" class="detail-value" placeholder="Value">
+    <button class="je-remove" type="button" title="Remove">×</button>`;
+  row.querySelector('.je-remove').addEventListener('click', () => row.remove());
+  wrap.appendChild(row);
+}
+function addDocRow() {
+  const wrap = document.getElementById('documentRows');
+  const row = document.createElement('div');
+  row.className = 'doc-row';
+  row.innerHTML = `
+    <input type="text" class="doc-name" placeholder="What document? (e.g. Passbook, KYC)">
+    <input type="file" class="doc-file">
+    <button class="je-remove" type="button" title="Remove">×</button>`;
+  const status = document.createElement('div');
+  status.className = 'doc-file-status';
+  wrap.appendChild(row);
+  wrap.appendChild(status);
+  row.querySelector('.doc-file').addEventListener('change', (e) => {
+    const f = e.target.files[0];
+    if (f && f.size > MAX_FILE_BYTES) {
+      status.textContent = `"${f.name}" is too large (max 8MB). Choose a smaller file.`;
+      status.style.color = 'var(--debit-red)';
+      e.target.value = '';
+    } else if (f) {
+      status.textContent = `${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB) ready to upload.`;
+      status.style.color = 'var(--ink-soft)';
+    } else {
+      status.textContent = '';
+    }
+  });
+  row.querySelector('.je-remove').addEventListener('click', () => { row.remove(); status.remove(); });
+}
+
+function renderCategoryChips() {
+  const wrap = document.getElementById('categoryChips');
+  if (CATEGORIES_CACHE.length === 0) { wrap.innerHTML = '<span style="font-size:0.82rem;color:var(--ink-soft);">No categories yet — add one below.</span>'; return; }
+  wrap.innerHTML = HEAD_ORDER.map(h => CATEGORIES_CACHE.filter(c => c.head === h).map(c => `<span class="pill category">${c.categoryName}${c.pending ? ' · syncing' : ''}</span>`).join('')).join('');
+}
+
+async function renderAccountsList() {
+  const wrap = document.getElementById('accountsWrap');
+  const accounts = await LEDGER.getAccounts();
+  ACCOUNTS_CACHE = accounts;
+  populateIncomeAccountSelect();
+  refreshCategorySelect();
+  if (accounts.length === 0) {
+    wrap.innerHTML = '<div class="empty-state"><div class="eyebrow">No accounts yet</div>Add your first account above — start with things like Cash, Bank, or an expense category.</div>';
+    return;
+  }
+  let html = '';
+  HEAD_ORDER.forEach(h => {
+    const headAccounts = accounts.filter(a => a.head === h);
+    if (headAccounts.length === 0) return;
+    html += `<div class="panel-title" style="border:none;margin:${html ? '18px' : '0'} 0 6px;">${h}</div>`;
+    const byCat = {};
+    headAccounts.forEach(a => { const key = a.categoryId || '__none__'; if (!byCat[key]) byCat[key] = []; byCat[key].push(a); });
+    const catKeys = Object.keys(byCat).sort((x, y) => {
+      if (x === '__none__') return 1; if (y === '__none__') return -1;
+      const cx = CATEGORIES_CACHE.find(c => c.categoryId === x); const cy = CATEGORIES_CACHE.find(c => c.categoryId === y);
+      return (cx ? cx.categoryName : '').localeCompare(cy ? cy.categoryName : '');
+    });
+    catKeys.forEach(key => {
+      const catName = key === '__none__' ? 'Uncategorized' : ((CATEGORIES_CACHE.find(c => c.categoryId === key) || {}).categoryName || 'Unknown');
+      html += `<div class="subhead-label">${catName}</div>`;
+      html += `
+        <table class="ledger" style="margin-bottom:14px;">
+          <thead><tr><th>Account</th><th>Details</th><th>Opening balance</th><th>Status</th></tr></thead>
+          <tbody>
+            ${byCat[key].map(a => `
+              <tr>
+                <td>${a.accountName}${a.pending ? ' <span class="pill Expense">pending</span>' : ''}${a.accountNumber ? `<br><span style="color:var(--ink-soft);font-size:0.78rem;">${a.accountNumber}</span>` : ''}</td>
+                <td>${a.accrualFrequency ? `<span class="pill interest">${a.interestRate || 0}% · ${a.accrualFrequency}</span>` : ''}</td>
+                <td class="num">${LEDGER.money(a.openingBalance)} ${a.openingType}</td>
+                <td>${a.status || 'Active'}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>`;
+    });
+  });
+  wrap.innerHTML = html;
+}
+
+async function initAccounts() {
+  document.getElementById('accMsg').innerHTML = '';
+  document.getElementById('catMsg').innerHTML = '';
+  ACCOUNTS_CACHE = LEDGER.getAccountsCacheSync();
+  CATEGORIES_CACHE = LEDGER.getCategoriesCacheSync();
+  renderCategoryChips();
+  toggleAssetFields();
+  document.getElementById('detailRows').innerHTML = '';
+  document.getElementById('documentRows').innerHTML = '';
+  await renderAccountsList();
+
+  CATEGORIES_CACHE = await LEDGER.getCategories();
+  renderCategoryChips();
+  refreshCategorySelect();
+}
+
+(async function () {
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(() => {});
+
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') || 'light';
+    applyTheme(current === 'dark' ? 'light' : 'dark');
+  });
+
+  await LEDGER.auth.ensureUnlocked();
+  LEDGER.renderSyncStamp();
+  LEDGER.startSyncLoop();
+  LEDGER.onStatusChange(() => refreshReminders());
+
+  document.querySelectorAll('.nav-item').forEach(n => n.addEventListener('click', () => switchView(n.dataset.view)));
+  document.querySelectorAll('.tile').forEach(t => t.addEventListener('click', () => handleTileClick(t.dataset.tile)));
+
+  document.getElementById('bellBtn').addEventListener('click', () => document.getElementById('bellPanel').classList.toggle('open'));
+  document.addEventListener('click', (e) => {
+    const wrap = document.querySelector('.bell-wrap');
+    if (!wrap.contains(e.target)) { document.getElementById('bellPanel').classList.remove('open'); document.getElementById('reminderFormWrap').style.display = 'none'; }
+  });
+  document.getElementById('toggleReminderFormBtn').addEventListener('click', () => {
+    const formWrap = document.getElementById('reminderFormWrap');
+    formWrap.style.display = formWrap.style.display === 'none' ? 'flex' : 'none';
+    if (formWrap.style.display === 'flex') document.getElementById('newReminderLabel').focus();
+  });
+  document.getElementById('saveReminderBtn').addEventListener('click', async () => {
+    const label = document.getElementById('newReminderLabel').value.trim();
+    const date = document.getElementById('newReminderDate').value;
+    if (!label || !date) return;
+    const btn = document.getElementById('saveReminderBtn');
+    btn.disabled = true;
+    try {
+      await LEDGER.addCustomReminder(label, date);
+      document.getElementById('newReminderLabel').value = '';
+      document.getElementById('newReminderDate').value = '';
+      document.getElementById('reminderFormWrap').style.display = 'none';
+      refreshReminders();
+    } catch (e) { /* leave form open so they can retry */ }
+    btn.disabled = false;
+  });
+
+  document.getElementById('addDebitLine').addEventListener('click', addDebitLine);
+  document.getElementById('addCreditLine').addEventListener('click', addCreditLine);
+
+  document.getElementById('addSupportingBtn').addEventListener('click', () => document.getElementById('supportingFileInput').click());
+  document.getElementById('supportingFileInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    if (file.size > MAX_FILE_BYTES) { showJeMsg(`"${file.name}" is too large (max 8MB).`, false); return; }
+    try {
+      const base64Data = await readFileAsBase64(file);
+      currentSupportingDocs.push({ fileName: file.name, mimeType: file.type || 'application/octet-stream', base64Data });
+      renderSupportingDocsList();
+    } catch (err) { showJeMsg('Could not read that file. Please try again.', false); }
+  });
+
+  document.getElementById('acctDetailsEditBtn').addEventListener('click', () => { acctPanelEditMode = !acctPanelEditMode; refreshAccountDetailsPanel(); });
+
+  document.getElementById('postEntry').addEventListener('click', () => {
+    const date = document.getElementById('jeDate').value;
+    if (!date) { showJeMsg('Please choose a date.', false); return; }
+    const lines = collectLines();
+    const hasDebit = lines.some(l => l.debit > 0);
+    const hasCredit = lines.some(l => l.credit > 0);
+    if (!hasDebit || !hasCredit) { showJeMsg('Add at least one debit line and one credit line.', false); return; }
+    if (!recalcTotals()) { showJeMsg('Debits and credits must balance before posting.', false); return; }
+
+    const clientEntryUID = LEDGER.uuid();
+    const bundle = {
+      clientEntryUID, date, voucherNo: clientEntryUID,
+      narration: document.getElementById('jeNarration').value.trim(),
+      lines, accrualAccountId: null, accrualDate: null,
+      entrySynced: false,
+      supportingDocs: currentSupportingDocs.map(d => ({ clientDocUID: LEDGER.uuid(), fileName: d.fileName, mimeType: d.mimeType, base64Data: d.base64Data, synced: false }))
+    };
+    LEDGER.queueEntryBundle(bundle);
+    showJeMsg(`Entry saved to this device as voucher ${clientEntryUID} and queued to sync.${bundle.supportingDocs.length ? ' Supporting document(s) will upload in the background.' : ''}`, true);
+    resetJournalForm();
+  });
+
+  document.getElementById('accHead').addEventListener('change', toggleAssetFields);
+  document.getElementById('accEarnsInterest').addEventListener('change', toggleInterestFields);
+  document.getElementById('addDetailBtn').addEventListener('click', addDetailRow);
+  document.getElementById('addDocBtn').addEventListener('click', addDocRow);
+
+  document.getElementById('addCatBtn').addEventListener('click', async () => {
+    const name = document.getElementById('newCatName').value.trim();
+    const head = document.getElementById('newCatHead').value;
+    if (!name) { showCatMsg('Enter a category name.', false); return; }
+    const btn = document.getElementById('addCatBtn');
+    btn.disabled = true;
+    try {
+      const data = await LEDGER.postDirect('addCategory', { categoryName: name, head });
+      CATEGORIES_CACHE.push({ categoryId: data.categoryId, categoryName: name, head });
+      LEDGER.invalidateRequestCache('getCategories');
+      showCatMsg(`"${name}" added under ${head}.`, true);
+    } catch (e) {
+      LEDGER.queueCategory({ clientCategoryUID: LEDGER.uuid(), categoryName: name, head });
+      showCatMsg(`Couldn't reach the sheet right now — "${name}" is queued and will sync shortly. It'll be selectable once synced.`, true);
+    }
+    document.getElementById('newCatName').value = '';
+    renderCategoryChips();
+    refreshCategorySelect();
+    btn.disabled = false;
+  });
+
+  document.getElementById('addAccBtn').addEventListener('click', async () => {
+    const accountName = document.getElementById('accName').value.trim();
+    const head = document.getElementById('accHead').value;
+    const openingBalance = Number(document.getElementById('accOpening').value) || 0;
+    const openingType = document.getElementById('accOpeningType').value;
+    if (!accountName) { showAccMsg('Please enter an account name.', false); return; }
+
+    const bundle = {
+      clientAccountUID: LEDGER.uuid(),
+      accountName, head, openingBalance, openingType,
+      categoryId: document.getElementById('accCategory').value || '',
+      accountNumber: '', interestRate: '', accrualFrequency: '', accrualDate: '', incomeAccountId: '',
+      accountSynced: false, resolvedAccountId: null,
+      details: [], documents: []
+    };
+
+    if (head === 'Assets') {
+      bundle.accountNumber = document.getElementById('accNumber').value.trim();
+      if (document.getElementById('accEarnsInterest').checked) {
+        const rate = document.getElementById('accRate').value;
+        const freq = document.getElementById('accFreq').value;
+        const accrualDate = document.getElementById('accAccrualDate').value;
+        const incomeAccountId = document.getElementById('accIncomeAcc').value;
+        if (!rate || !accrualDate || !incomeAccountId) {
+          showAccMsg('For interest-bearing accounts, fill in rate, accrual date, and the income account to credit.', false);
+          return;
+        }
+        bundle.interestRate = rate; bundle.accrualFrequency = freq; bundle.accrualDate = accrualDate; bundle.incomeAccountId = incomeAccountId;
+      }
+    }
+
+    document.querySelectorAll('#detailRows .detail-row').forEach(row => {
+      const detailName = row.querySelector('.detail-name').value.trim();
+      const detailValue = row.querySelector('.detail-value').value.trim();
+      if (detailName) bundle.details.push({ clientDetailUID: LEDGER.uuid(), detailName, detailValue, synced: false });
+    });
+
+    const docRows = [...document.querySelectorAll('#documentRows .doc-row')];
+    const btn = document.getElementById('addAccBtn');
+    btn.disabled = true; btn.textContent = 'Reading documents…';
+    try {
+      for (const row of docRows) {
+        const documentName = row.querySelector('.doc-name').value.trim();
+        const fileInput = row.querySelector('.doc-file');
+        const file = fileInput.files[0];
+        if (!documentName || !file) continue;
+        const base64Data = await readFileAsBase64(file);
+        bundle.documents.push({ clientDocUID: LEDGER.uuid(), documentName, fileName: file.name, mimeType: file.type || 'application/octet-stream', base64Data, synced: false });
+      }
+    } catch (e) {
+      showAccMsg('Could not read one of the selected files. Please try again.', false);
+      btn.disabled = false; btn.textContent = 'Add account';
+      return;
+    }
+
+    await LEDGER.queueAccountBundle(bundle);
+    showAccMsg(`"${accountName}" saved to this device and queued to sync${bundle.documents.length ? ' (documents will upload to Drive in the background)' : ''}.`, true);
+
+    document.getElementById('accName').value = '';
+    document.getElementById('accNumber').value = '';
+    document.getElementById('accOpening').value = '';
+    document.getElementById('accRate').value = '';
+    document.getElementById('accAccrualDate').value = '';
+    document.getElementById('accEarnsInterest').checked = false;
+    document.getElementById('detailRows').innerHTML = '';
+    document.getElementById('documentRows').innerHTML = '';
+    toggleInterestFields();
+    btn.disabled = false; btn.textContent = 'Add account';
+    await renderAccountsList();
+  });
+
+  const startView = (location.hash || '#dashboard').replace('#', '');
+  switchView(VIEWS[startView] ? startView : 'dashboard');
+  refreshReminders();
+})();
+</script>
+</body>
+</html>
